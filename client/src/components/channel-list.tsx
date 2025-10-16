@@ -1,0 +1,92 @@
+import { Hash, Plus, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { type ChannelWithCreator } from "@shared/schema";
+
+interface ChannelListProps {
+  channels: ChannelWithCreator[];
+  activeChannelId: string | null;
+  onChannelSelect: (channelId: string) => void;
+  onCreateChannel: () => void;
+  isLoading: boolean;
+}
+
+export function ChannelList({
+  channels,
+  activeChannelId,
+  onChannelSelect,
+  onCreateChannel,
+  isLoading,
+}: ChannelListProps) {
+  return (
+    <div className="flex flex-col h-full bg-card border-r border-card-border">
+      <div className="p-4 border-b border-card-border">
+        <h2 className="text-lg font-semibold text-foreground mb-3">Channels</h2>
+        <Button
+          onClick={onCreateChannel}
+          className="w-full"
+          size="sm"
+          data-testid="button-create-channel"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          New Channel
+        </Button>
+      </div>
+
+      <ScrollArea className="flex-1">
+        {isLoading ? (
+          <div className="flex items-center justify-center p-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : channels.length === 0 ? (
+          <div className="p-8 text-center">
+            <Hash className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground mb-4">
+              No channels yet
+            </p>
+            <Button
+              onClick={onCreateChannel}
+              variant="secondary"
+              size="sm"
+              data-testid="button-create-first-channel"
+            >
+              Create your first channel
+            </Button>
+          </div>
+        ) : (
+          <div className="p-2 space-y-1">
+            {channels.map((channel) => {
+              const isActive = channel.id === activeChannelId;
+              return (
+                <button
+                  key={channel.id}
+                  onClick={() => onChannelSelect(channel.id)}
+                  className={`
+                    w-full flex items-center gap-2 px-3 py-2 rounded-md text-left
+                    transition-colors duration-150
+                    ${
+                      isActive
+                        ? "bg-primary/10 text-primary border-l-2 border-primary"
+                        : "text-muted-foreground hover-elevate"
+                    }
+                  `}
+                  data-testid={`channel-item-${channel.id}`}
+                >
+                  <Hash className="h-4 w-4 flex-shrink-0" />
+                  <span className="text-sm font-medium truncate">
+                    {channel.name}
+                  </span>
+                  {channel.messageCount !== undefined && channel.messageCount > 0 && !isActive && (
+                    <span className="ml-auto bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
+                      {channel.messageCount}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </ScrollArea>
+    </div>
+  );
+}
