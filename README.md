@@ -11,3 +11,8 @@ This is something I made at the beginning of 2025 and then completely forgot abo
 - [ ] Add message editing and deleting
 - [ ] Add profile/account settings
 - [ ] Implement account recovery methods
+
+# Introduction
+A lightweight, modern chat application built with TypeScript, Vite, Tailwind CSS, and a clean client/server architecture. Originally created on Replit as a learning project, DevChat has grown into a flexible foundation for real‑time messaging features, user accounts, and more.
+
+This repository is structured for clarity, scalability, and ease of development — making it a great starting point for future enhancements.
