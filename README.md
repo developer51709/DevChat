@@ -113,6 +113,10 @@ Planned improvements:
 
 - Better error handling and validation
 
+- Staff roles and channels
+
+- DM channels
+
 ## 🤝 Contributing
 Contributions, ideas, and suggestions are welcome.
 Feel free to open an issue or submit a pull request.
