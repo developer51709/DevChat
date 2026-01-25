@@ -24,7 +24,7 @@ export default function HomePage() {
 
   // WebSocket handler for real-time messages
   const handleWebSocketMessage = useCallback((data: any) => {
-    if (data.type === "NEW_MESSAGE") {
+    if (data.type === "NEW_MESSAGE" || data.type === "UPDATE_MESSAGE" || data.type === "DELETE_MESSAGE") {
       // Invalidate messages query for the specific channel to refetch
       queryClient.invalidateQueries({
         queryKey: ["/api/channels", data.channelId, "messages"],

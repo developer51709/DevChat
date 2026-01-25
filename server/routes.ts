@@ -99,6 +99,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/messages/:id", requireAuth, async (req, res) => {
+    try {
+      const { content } = req.body;
+      if (!content) return res.status(400).send("Content is required");
+      
+      const message = await storage.getMessage(req.params.id);
+      if (!message) return res.status(404).send("Message not found");
+      if (message.userId !== req.user!.id) return res.status(403).send("Unauthorized");
+
+      const updated = await storage.updateMessage(req.params.id, content);
+      
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: "UPDATE_MESSAGE",
+            channelId: updated.channelId,
+            message: { ...updated, user: { id: req.user!.id, username: req.user!.username } }
+          }));
+        }
+      });
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.delete("/api/messages/:id", requireAuth, async (req, res) => {
+    try {
+      const message = await storage.getMessage(req.params.id);
+      if (!message) return res.status(404).send("Message not found");
+      if (message.userId !== req.user!.id) return res.status(403).send("Unauthorized");
+
+      await storage.deleteMessage(req.params.id);
+      
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: "DELETE_MESSAGE",
+            channelId: message.channelId,
+            messageId: req.params.id
+          }));
+        }
+      });
+
+      res.sendStatus(200);
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
+  });
+
   // Account settings routes
   app.patch("/api/user/profile", requireAuth, async (req, res) => {
     try {
