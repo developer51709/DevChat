@@ -9,6 +9,8 @@ import { UserProfile } from "@/components/user-profile";
 import { CreateChannelDialog } from "@/components/create-channel-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Menu, X as CloseIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   type ChannelWithCreator,
   type MessageWithUser,
@@ -21,6 +23,7 @@ export default function HomePage() {
   const { toast } = useToast();
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
   const [isCreateChannelOpen, setIsCreateChannelOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // WebSocket handler for real-time messages
   const handleWebSocketMessage = useCallback((data: any) => {
@@ -120,45 +123,80 @@ export default function HomePage() {
   const userMessageCount = messages.filter((m) => m.userId === user?.id).length;
 
   return (
-    <div className="h-screen flex bg-background">
-      {/* Left sidebar - Channel list */}
-      <div className="w-70 flex-shrink-0">
-        <ChannelList
-          channels={channels}
-          activeChannelId={activeChannelId}
-          onChannelSelect={setActiveChannelId}
-          onCreateChannel={() => setIsCreateChannelOpen(true)}
-          isLoading={channelsLoading}
+    <div className="h-screen flex bg-background overflow-hidden relative">
+      {/* Sidebar overlay for mobile */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
         />
-        {user && (
-          <UserProfile
-            user={user}
-            messageCount={userMessageCount}
-            onLogout={() => logoutMutation.mutate()}
-          />
-        )}
+      )}
+
+      {/* Sidebar - Channel list */}
+      <div className={`
+        fixed inset-y-0 left-0 w-72 bg-background border-r border-border z-50 transform transition-transform duration-300 lg:relative lg:translate-x-0
+        ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+      `}>
+        <div className="h-full flex flex-col">
+          <div className="lg:hidden p-4 border-b flex justify-between items-center">
+            <span className="font-bold">Channels</span>
+            <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(false)}>
+              <CloseIcon className="h-5 w-5" />
+            </Button>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            <ChannelList
+              channels={channels}
+              activeChannelId={activeChannelId}
+              onChannelSelect={(id) => {
+                setActiveChannelId(id);
+                setIsSidebarOpen(false);
+              }}
+              onCreateChannel={() => setIsCreateChannelOpen(true)}
+              isLoading={channelsLoading}
+            />
+          </div>
+          {user && (
+            <UserProfile
+              user={user}
+              messageCount={userMessageCount}
+              onLogout={() => logoutMutation.mutate()}
+            />
+          )}
+        </div>
       </div>
 
       {/* Main content area */}
-      <div className="flex-1 flex flex-col">
-        {/* Channel header */}
-        <div className="h-14 border-b border-border px-4 flex items-center bg-background">
-          {activeChannel ? (
-            <div>
-              <h1 className="text-lg font-semibold text-foreground">
-                # {activeChannel.name}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Mobile Header */}
+        <div className="h-14 border-b border-border px-4 flex items-center justify-between bg-background lg:justify-start">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden mr-2"
+            onClick={() => setIsSidebarOpen(true)}
+          >
+            <Menu className="h-6 w-6" />
+          </Button>
+          
+          <div className="flex-1 truncate">
+            {activeChannel ? (
+              <div>
+                <h1 className="text-base font-semibold text-foreground truncate">
+                  # {activeChannel.name}
+                </h1>
+                {activeChannel.description && (
+                  <p className="text-xs text-muted-foreground truncate">
+                    {activeChannel.description}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <h1 className="text-base font-semibold text-muted-foreground">
+                Select a channel
               </h1>
-              {activeChannel.description && (
-                <p className="text-xs text-muted-foreground">
-                  {activeChannel.description}
-                </p>
-              )}
-            </div>
-          ) : (
-            <h1 className="text-lg font-semibold text-muted-foreground">
-              Select a channel
-            </h1>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Messages area */}
@@ -176,12 +214,21 @@ export default function HomePage() {
             />
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <p className="text-muted-foreground">
-              {channels.length === 0
-                ? "Create a channel to get started"
-                : "Select a channel to view messages"}
-            </p>
+          <div className="flex-1 flex items-center justify-center p-4">
+            <div className="text-center">
+              <p className="text-muted-foreground">
+                {channels.length === 0
+                  ? "Create a channel to get started"
+                  : "Select a channel to view messages"}
+              </p>
+              <Button
+                variant="outline"
+                className="mt-4 lg:hidden"
+                onClick={() => setIsSidebarOpen(true)}
+              >
+                View Channels
+              </Button>
+            </div>
           </div>
         )}
       </div>
