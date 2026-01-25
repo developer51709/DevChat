@@ -1,4 +1,3 @@
-// Referenced from javascript_database and javascript_auth_all_persistance blueprints
 import {
   users,
   channels,
@@ -13,12 +12,11 @@ import {
   type MessageWithUser,
 } from "@shared/schema";
 import { db } from "./db";
-import { pool } from "./db";
 import { eq, desc } from "drizzle-orm";
 import session from "express-session";
-import connectPg from "connect-pg-simple";
+import createMemoryStore from "memorystore";
 
-const PostgresSessionStore = connectPg(session);
+const MemoryStore = createMemoryStore(session);
 
 export interface IStorage {
   // User methods
@@ -50,9 +48,8 @@ export class DatabaseStorage implements IStorage {
   sessionStore: session.SessionStore;
 
   constructor() {
-    this.sessionStore = new PostgresSessionStore({
-      pool,
-      createTableIfMissing: true,
+    this.sessionStore = new MemoryStore({
+      checkPeriod: 86400000,
     });
   }
 
