@@ -7,12 +7,18 @@ import { z } from "zod";
 // Helper function to generate UUID
 const generateId = () => crypto.randomUUID();
 
+// User roles
+export const userRoles = ["user", "moderator", "admin"] as const;
+export type UserRole = typeof userRoles[number];
+
 // Users table
 export const users = sqliteTable("users", {
   id: text("id").primaryKey().$defaultFn(generateId),
   username: text("username").notNull().unique(),
   displayName: text("display_name"),
   password: text("password").notNull(),
+  role: text("role").$type<UserRole>().default("user").notNull(),
+  bio: text("bio"),
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
 });
 
@@ -80,6 +86,7 @@ export const insertMessageSchema = createInsertSchema(messages).omit({
 export const updateProfileSchema = z.object({
   username: z.string().min(3).optional(),
   displayName: z.string().min(1).optional(),
+  bio: z.string().max(500).optional(),
 });
 
 export const updatePasswordSchema = z.object({
