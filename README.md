@@ -99,23 +99,27 @@ Drizzle ORM provides a clean, type‑safe database layer.
 ## 📌 Roadmap / Todo
 Planned improvements:
 
-- Message editing
+- [x] Message editing
 
-- Message deletion
+- [x] Message deletion
 
-- Profile & account settings
+- [x] Profile & account settings
 
-- Account recovery options
+- [x] Modile friendly UI
 
-- Real-time messaging (WebSockets or similar)
+- [ ] Account recovery options
 
-- UI improvements and theming
+- [ ] Real-time messaging (WebSockets or similar)
 
-- Better error handling and validation
+- [ ] UI improvements and theming
 
-- Staff roles and channels
+- [ ] Better error handling and validation
 
-- DM channels
+- [ ] Staff roles and channels
+
+- [ ] DM channels
+
+- [ ] SQLite database
 
 ## 🤝 Contributing
 Contributions, ideas, and suggestions are welcome.
