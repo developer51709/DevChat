@@ -3,10 +3,12 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { setupAuth } from "./auth";
+import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import {
   insertChannelSchema,
   insertMessageSchema,
+  updateProfileSchema,
+  updatePasswordSchema,
   type MessageWithUser,
 } from "@shared/schema";
 
@@ -94,6 +96,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating message:", error);
       res.status(400).send(error.message || "Failed to create message");
+    }
+  });
+
+  // Account settings routes
+  app.patch("/api/user/profile", requireAuth, async (req, res) => {
+    try {
+      const data = updateProfileSchema.parse(req.body);
+      const user = await storage.updateUser(req.user!.id, data);
+      res.json(user);
+    } catch (error: any) {
+      res.status(400).send(error.message);
+    }
+  });
+
+  app.patch("/api/user/password", requireAuth, async (req, res) => {
+    try {
+      const { currentPassword, newPassword } = updatePasswordSchema.parse(req.body);
+      const user = await storage.getUser(req.user!.id);
+      if (!user || !(await comparePasswords(currentPassword, user.password))) {
+        return res.status(400).send("Invalid current password");
+      }
+      const hashedPassword = await hashPassword(newPassword);
+      await storage.updateUser(user.id, { password: hashedPassword });
+      res.sendStatus(200);
+    } catch (error: any) {
+      res.status(400).send(error.message);
+    }
+  });
+
+  app.delete("/api/user", requireAuth, async (req, res) => {
+    try {
+      await storage.deleteUser(req.user!.id);
+      req.logout((err) => {
+        if (err) return res.status(500).send("Logout failed");
+        res.sendStatus(200);
+      });
+    } catch (error: any) {
+      res.status(500).send(error.message);
     }
   });
 

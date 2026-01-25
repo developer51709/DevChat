@@ -1,5 +1,6 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User as UserIcon } from "lucide-react";
+import { LogOut, Settings, User as UserIcon } from "lucide-react";
 import { type User } from "@shared/schema";
 
 interface UserProfileProps {
@@ -30,14 +31,14 @@ export function UserProfile({ user, messageCount = 0, onLogout }: UserProfilePro
             <div className="relative">
               <Avatar className="h-10 w-10">
                 <AvatarFallback className="bg-primary/20 text-primary font-semibold">
-                  {user.username.slice(0, 2).toUpperCase()}
+                  {(user.displayName || user.username).slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="absolute bottom-0 right-0 h-3 w-3 bg-status-online border-2 border-card rounded-full" />
             </div>
             <div className="flex-1 text-left min-w-0">
               <p className="text-sm font-semibold text-foreground truncate" data-testid="text-username">
-                {user.username}
+                {user.displayName || user.username}
               </p>
               <p className="text-xs text-muted-foreground">
                 {messageCount} messages
@@ -48,10 +49,12 @@ export function UserProfile({ user, messageCount = 0, onLogout }: UserProfilePro
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>My Account</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem disabled>
-            <UserIcon className="mr-2 h-4 w-4" />
-            <span>Profile</span>
-          </DropdownMenuItem>
+          <Link href="/settings">
+            <DropdownMenuItem className="cursor-pointer">
+              <Settings className="mr-2 h-4 w-4" />
+              <span>Settings</span>
+            </DropdownMenuItem>
+          </Link>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={onLogout} data-testid="button-logout">
             <LogOut className="mr-2 h-4 w-4" />

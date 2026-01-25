@@ -35,6 +35,10 @@ export interface IStorage {
   getMessagesByChannel(channelId: string): Promise<MessageWithUser[]>;
   createMessage(message: InsertMessage, userId: string): Promise<Message>;
 
+  // Profile methods
+  updateUser(id: string, data: Partial<User>): Promise<User>;
+  deleteUser(id: string): Promise<void>;
+
   // Session store
   sessionStore: session.SessionStore;
 }
@@ -177,6 +181,20 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return message;
+  }
+
+  async updateUser(id: string, data: Partial<User>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set(data)
+      .where(eq(users.id, id))
+      .returning();
+    if (!user) throw new Error("User not found");
+    return user;
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
   }
 }
 

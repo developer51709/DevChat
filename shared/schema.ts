@@ -8,6 +8,7 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
+  displayName: text("display_name"),
   password: text("password").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -71,6 +72,16 @@ export const insertMessageSchema = createInsertSchema(messages).omit({
   id: true,
   userId: true,
   createdAt: true,
+});
+
+export const updateProfileSchema = z.object({
+  username: z.string().min(3).optional(),
+  displayName: z.string().min(1).optional(),
+});
+
+export const updatePasswordSchema = z.object({
+  currentPassword: z.string().min(6),
+  newPassword: z.string().min(6),
 });
 
 // Types
