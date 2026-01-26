@@ -94,7 +94,7 @@ export function MessageList({ messages, isLoading, currentUserId }: MessageListP
                   <Link href={`/profile/${message.userId}`}>
                     <Avatar className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity">
                       <AvatarFallback className="bg-primary/20 text-primary font-semibold">
-                        {message.user.username.slice(0, 2).toUpperCase()}
+                        {(message.user.displayName || message.user.username).slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                   </Link>
@@ -113,7 +113,7 @@ export function MessageList({ messages, isLoading, currentUserId }: MessageListP
                         }`}
                         data-testid={`message-username-${message.id}`}
                       >
-                        {message.user.username}
+                        {message.user.displayName || message.user.username}
                       </span>
                     </Link>
                     <span

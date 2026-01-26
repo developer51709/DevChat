@@ -115,7 +115,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           client.send(JSON.stringify({
             type: "UPDATE_MESSAGE",
             channelId: updated.channelId,
-            message: { ...updated, user: { id: req.user!.id, username: req.user!.username } }
+            message: { 
+              ...updated, 
+              user: { 
+                id: req.user!.id, 
+                username: req.user!.username,
+                displayName: req.user!.displayName
+              } 
+            }
           }));
         }
       });

@@ -109,5 +109,5 @@ export type ChannelWithCreator = Channel & {
 };
 
 export type MessageWithUser = Message & {
-  user: Pick<User, "id" | "username">;
+  user: Pick<User, "id" | "username" | "displayName">;
 };

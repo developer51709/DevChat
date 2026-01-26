@@ -152,6 +152,7 @@ export class DatabaseStorage implements IStorage {
         user: {
           id: users.id,
           username: users.username,
+          displayName: users.displayName,
         },
       })
       .from(messages)
