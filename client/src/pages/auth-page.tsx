@@ -48,7 +48,7 @@ export default function AuthPage() {
               <Hash className="h-6 w-6 text-primary" />
             </div>
             <h1 className="text-2xl font-bold text-foreground">
-              Discord Developers Board
+              Developers Board
             </h1>
             <p className="text-muted-foreground mt-2">
               Real-time team collaboration
@@ -174,7 +174,7 @@ export default function AuthPage() {
               Built for developers
             </h2>
             <p className="text-lg text-muted-foreground">
-              A modern messaging platform designed specifically for Discord development teams.
+              A modern messaging platform designed specifically for development teams.
             </p>
           </div>
 
