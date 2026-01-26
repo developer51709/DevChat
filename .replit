@@ -38,5 +38,14 @@ task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
 
+[[workflows.workflow]]
+name = "Update browserslist"
+mode = "sequential"
+author = 53695201
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npx update-browserslist-db@latest"
+
 [agent]
 integrations = ["javascript_database:1.0.0", "javascript_auth_all_persistance:1.0.0", "javascript_websocket:1.0.0"]
