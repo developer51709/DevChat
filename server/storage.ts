@@ -19,6 +19,10 @@ import createMemoryStore from "memorystore";
 const MemoryStore = createMemoryStore(session);
 
 export interface IStorage {
+  // Setup methods
+  hasAdminUser(): Promise<boolean>;
+  createAdminUser(user: InsertUser): Promise<User>;
+
   // User methods
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -51,6 +55,19 @@ export class DatabaseStorage implements IStorage {
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
     });
+  }
+
+  async hasAdminUser(): Promise<boolean> {
+    const [admin] = await db.select().from(users).where(eq(users.role, "admin")).limit(1);
+    return !!admin;
+  }
+
+  async createAdminUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values({
+      ...insertUser,
+      role: "admin",
+    }).returning();
+    return user;
   }
 
   async getUser(id: string): Promise<User | undefined> {

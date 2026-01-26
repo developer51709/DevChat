@@ -21,6 +21,50 @@ function requireAuth(req: Request, res: Response, next: Function) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup status endpoint - check if admin exists
+  app.get("/api/setup/status", async (req, res) => {
+    try {
+      const hasAdmin = await storage.hasAdminUser();
+      res.json({ setupRequired: !hasAdmin });
+    } catch (error) {
+      console.error("Error checking setup status:", error);
+      res.status(500).send("Failed to check setup status");
+    }
+  });
+
+  // Initial admin creation endpoint - only works if no admin exists
+  app.post("/api/setup/admin", async (req, res) => {
+    try {
+      const hasAdmin = await storage.hasAdminUser();
+      if (hasAdmin) {
+        return res.status(403).send("Setup already completed");
+      }
+
+      const { username, password } = req.body;
+      if (!username || !password) {
+        return res.status(400).send("Username and password are required");
+      }
+      if (password.length < 6) {
+        return res.status(400).send("Password must be at least 6 characters");
+      }
+
+      const hashedPassword = await hashPassword(password);
+      const admin = await storage.createAdminUser({ username, password: hashedPassword });
+      
+      // Log the admin in after creation
+      req.login(admin, (err) => {
+        if (err) {
+          return res.status(500).send("Admin created but login failed");
+        }
+        const { password: _, ...safeUser } = admin;
+        res.status(201).json(safeUser);
+      });
+    } catch (error: any) {
+      console.error("Error creating admin:", error);
+      res.status(400).send(error.message || "Failed to create admin");
+    }
+  });
+
   // Setup authentication routes: /api/register, /api/login, /api/logout, /api/user
   setupAuth(app);
 
