@@ -17,3 +17,7 @@
   <br>- Added channel editing and deletion endpoints
   <br>- Added UI buttons for the channel management endpoints
 </details>
+<details>
+  <summary>January 26, 2026</summary>
+  - Updated website open graph tags
+</details>
