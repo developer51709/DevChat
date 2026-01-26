@@ -32,6 +32,8 @@ export interface IStorage {
   getChannels(): Promise<ChannelWithCreator[]>;
   getChannel(id: string): Promise<ChannelWithCreator | undefined>;
   createChannel(channel: InsertChannel, userId: string): Promise<Channel>;
+  updateChannel(id: string, data: Partial<InsertChannel>): Promise<Channel>;
+  deleteChannel(id: string): Promise<void>;
 
   // Message methods
   getMessagesByChannel(channelId: string): Promise<MessageWithUser[]>;
@@ -156,6 +158,20 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return channel;
+  }
+
+  async updateChannel(id: string, data: Partial<InsertChannel>): Promise<Channel> {
+    const [channel] = await db
+      .update(channels)
+      .set(data)
+      .where(eq(channels.id, id))
+      .returning();
+    if (!channel) throw new Error("Channel not found");
+    return channel;
+  }
+
+  async deleteChannel(id: string): Promise<void> {
+    await db.delete(channels).where(eq(channels.id, id));
   }
 
   async getMessagesByChannel(channelId: string): Promise<MessageWithUser[]> {

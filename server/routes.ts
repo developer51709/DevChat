@@ -20,6 +20,17 @@ function requireAuth(req: Request, res: Response, next: Function) {
   next();
 }
 
+// Middleware to check admin role
+function requireAdmin(req: Request, res: Response, next: Function) {
+  if (!req.isAuthenticated()) {
+    return res.sendStatus(401);
+  }
+  if (req.user?.role !== "admin") {
+    return res.status(403).send("Admin access required");
+  }
+  next();
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup status endpoint - check if admin exists
   app.get("/api/setup/status", async (req, res) => {
@@ -92,7 +103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/channels", requireAuth, async (req, res) => {
+  app.post("/api/channels", requireAdmin, async (req, res) => {
     try {
       const validatedData = insertChannelSchema.parse(req.body);
       const channel = await storage.createChannel(validatedData, req.user!.id);
@@ -101,6 +112,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating channel:", error);
       res.status(400).send(error.message || "Failed to create channel");
+    }
+  });
+
+  app.patch("/api/channels/:id", requireAdmin, async (req, res) => {
+    try {
+      const { name, description } = req.body;
+      const channel = await storage.getChannel(req.params.id);
+      if (!channel) {
+        return res.status(404).send("Channel not found");
+      }
+      const updated = await storage.updateChannel(req.params.id, { name, description });
+      const channelWithCreator = await storage.getChannel(updated.id);
+      res.json(channelWithCreator);
+    } catch (error: any) {
+      console.error("Error updating channel:", error);
+      res.status(400).send(error.message || "Failed to update channel");
+    }
+  });
+
+  app.delete("/api/channels/:id", requireAdmin, async (req, res) => {
+    try {
+      const channel = await storage.getChannel(req.params.id);
+      if (!channel) {
+        return res.status(404).send("Channel not found");
+      }
+      await storage.deleteChannel(req.params.id);
+      res.sendStatus(200);
+    } catch (error: any) {
+      console.error("Error deleting channel:", error);
+      res.status(500).send(error.message || "Failed to delete channel");
     }
   });
 
