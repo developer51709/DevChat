@@ -7,6 +7,8 @@ import { MessageList } from "@/components/message-list";
 import { MessageInput } from "@/components/message-input";
 import { UserProfile } from "@/components/user-profile";
 import { CreateChannelDialog } from "@/components/create-channel-dialog";
+import { EditChannelDialog } from "@/components/edit-channel-dialog";
+import { DeleteChannelDialog } from "@/components/delete-channel-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Menu, X as CloseIcon } from "lucide-react";
@@ -23,19 +25,22 @@ export default function HomePage() {
   const { toast } = useToast();
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
   const [isCreateChannelOpen, setIsCreateChannelOpen] = useState(false);
+  const [isEditChannelOpen, setIsEditChannelOpen] = useState(false);
+  const [isDeleteChannelOpen, setIsDeleteChannelOpen] = useState(false);
+  const [selectedChannel, setSelectedChannel] = useState<ChannelWithCreator | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const isAdmin = user?.role === "admin";
 
   // WebSocket handler for real-time messages
   const handleWebSocketMessage = useCallback((data: any) => {
     if (data.type === "NEW_MESSAGE" || data.type === "UPDATE_MESSAGE" || data.type === "DELETE_MESSAGE") {
-      // Invalidate messages query for the specific channel to refetch
       queryClient.invalidateQueries({
         queryKey: ["/api/channels", data.channelId, "messages"],
       });
     }
   }, []);
 
-  // Connect to WebSocket
   useWebSocket(handleWebSocketMessage, !!user);
 
   // Fetch channels
@@ -84,6 +89,56 @@ export default function HomePage() {
     },
   });
 
+  // Edit channel mutation
+  const editChannelMutation = useMutation({
+    mutationFn: async ({ id, name, description }: { id: string; name: string; description?: string }) => {
+      const res = await apiRequest("PATCH", `/api/channels/${id}`, { name, description });
+      return await res.json();
+    },
+    onSuccess: (updatedChannel: ChannelWithCreator) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/channels"] });
+      setIsEditChannelOpen(false);
+      setSelectedChannel(null);
+      toast({
+        title: "Channel updated",
+        description: `#${updatedChannel.name} has been updated`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to update channel",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete channel mutation
+  const deleteChannelMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/channels/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/channels"] });
+      setIsDeleteChannelOpen(false);
+      if (selectedChannel?.id === activeChannelId) {
+        setActiveChannelId(channels.find(c => c.id !== selectedChannel?.id)?.id || null);
+      }
+      setSelectedChannel(null);
+      toast({
+        title: "Channel deleted",
+        description: "The channel has been deleted",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to delete channel",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (data: InsertMessage) => {
@@ -108,6 +163,14 @@ export default function HomePage() {
     createChannelMutation.mutate({ name, description });
   };
 
+  const handleEditChannel = (id: string, name: string, description?: string) => {
+    editChannelMutation.mutate({ id, name, description });
+  };
+
+  const handleDeleteChannel = (id: string) => {
+    deleteChannelMutation.mutate(id);
+  };
+
   const handleSendMessage = (content: string) => {
     if (activeChannelId) {
       sendMessageMutation.mutate({
@@ -118,13 +181,10 @@ export default function HomePage() {
   };
 
   const activeChannel = channels.find((c) => c.id === activeChannelId);
-
-  // Count user's messages
   const userMessageCount = messages.filter((m) => m.userId === user?.id).length;
 
   return (
     <div className="h-screen flex bg-background overflow-hidden relative">
-      {/* Sidebar overlay for mobile */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
@@ -132,7 +192,6 @@ export default function HomePage() {
         />
       )}
 
-      {/* Sidebar - Channel list */}
       <div className={`
         fixed inset-y-0 left-0 w-72 bg-background border-r border-border z-50 transform transition-transform duration-300 lg:relative lg:translate-x-0
         ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
@@ -153,7 +212,16 @@ export default function HomePage() {
                 setIsSidebarOpen(false);
               }}
               onCreateChannel={() => setIsCreateChannelOpen(true)}
+              onEditChannel={(channel) => {
+                setSelectedChannel(channel);
+                setIsEditChannelOpen(true);
+              }}
+              onDeleteChannel={(channel) => {
+                setSelectedChannel(channel);
+                setIsDeleteChannelOpen(true);
+              }}
               isLoading={channelsLoading}
+              isAdmin={isAdmin}
             />
           </div>
           {user && (
@@ -166,9 +234,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Mobile Header */}
         <div className="h-14 border-b border-border px-4 flex items-center justify-between bg-background lg:justify-start">
           <Button
             variant="ghost"
@@ -199,7 +265,6 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Messages area */}
         {activeChannelId ? (
           <>
             <MessageList
@@ -218,7 +283,7 @@ export default function HomePage() {
             <div className="text-center">
               <p className="text-muted-foreground">
                 {channels.length === 0
-                  ? "Create a channel to get started"
+                  ? isAdmin ? "Create a channel to get started" : "No channels available yet"
                   : "Select a channel to view messages"}
               </p>
               <Button
@@ -233,12 +298,27 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* Create channel dialog */}
       <CreateChannelDialog
         open={isCreateChannelOpen}
         onOpenChange={setIsCreateChannelOpen}
         onCreateChannel={handleCreateChannel}
         isPending={createChannelMutation.isPending}
+      />
+
+      <EditChannelDialog
+        open={isEditChannelOpen}
+        onOpenChange={setIsEditChannelOpen}
+        channel={selectedChannel}
+        onEditChannel={handleEditChannel}
+        isPending={editChannelMutation.isPending}
+      />
+
+      <DeleteChannelDialog
+        open={isDeleteChannelOpen}
+        onOpenChange={setIsDeleteChannelOpen}
+        channel={selectedChannel}
+        onDeleteChannel={handleDeleteChannel}
+        isPending={deleteChannelMutation.isPending}
       />
     </div>
   );
