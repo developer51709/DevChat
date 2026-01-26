@@ -120,7 +120,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               user: { 
                 id: req.user!.id, 
                 username: req.user!.username,
-                displayName: req.user!.displayName
+                displayName: req.user!.displayName,
+                role: req.user!.role
               } 
             }
           }));

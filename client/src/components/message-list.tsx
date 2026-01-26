@@ -11,6 +11,9 @@ import { useToast } from "@/hooks/use-toast";
 
 import { Link } from "wouter";
 
+import { Badge } from "@/components/ui/badge";
+import { ShieldAlert, ShieldCheck } from "lucide-react";
+
 interface MessageListProps {
   messages: MessageWithUser[];
   isLoading: boolean;
@@ -116,6 +119,18 @@ export function MessageList({ messages, isLoading, currentUserId }: MessageListP
                         {message.user.displayName || message.user.username}
                       </span>
                     </Link>
+                    {message.user.role === "admin" && (
+                      <Badge variant="secondary" className="h-4 px-1 gap-1 text-[10px] bg-red-500/10 text-red-500 border-red-500/20">
+                        <ShieldAlert className="h-3 w-3" />
+                        Admin
+                      </Badge>
+                    )}
+                    {message.user.role === "moderator" && (
+                      <Badge variant="secondary" className="h-4 px-1 gap-1 text-[10px] bg-blue-500/10 text-blue-500 border-blue-500/20">
+                        <ShieldCheck className="h-3 w-3" />
+                        Mod
+                      </Badge>
+                    )}
                     <span
                       className="text-xs text-muted-foreground"
                       data-testid={`message-timestamp-${message.id}`}
