@@ -12,4 +12,8 @@
   <br>- Added user profile pages
   <br>- Added profile badges for admin/moderator accounts
   <br>- Added bio section to account/profile settings
+  <br>- Added admin account setup
+  <br>- Limited chanel creation to admin users only
+  <br>- Added channel editing and deletion endpoints
+  <br>- Added UI buttons for the channel management endpoints
 </details>
