@@ -161,6 +161,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/users/:id", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      if (!user) return res.status(404).send("User not found");
+      const { password, ...safeUser } = user;
+      res.json(safeUser);
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
+  });
+
   app.patch("/api/user/password", requireAuth, async (req, res) => {
     try {
       const { currentPassword, newPassword } = updatePasswordSchema.parse(req.body);

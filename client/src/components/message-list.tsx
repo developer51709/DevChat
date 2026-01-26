@@ -9,6 +9,8 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
+import { Link } from "wouter";
+
 interface MessageListProps {
   messages: MessageWithUser[];
   isLoading: boolean;
@@ -89,11 +91,13 @@ export function MessageList({ messages, isLoading, currentUserId }: MessageListP
             >
               <div className="flex-shrink-0">
                 {showAvatar ? (
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-primary/20 text-primary font-semibold">
-                      {message.user.username.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  <Link href={`/profile/${message.userId}`}>
+                    <Avatar className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity">
+                      <AvatarFallback className="bg-primary/20 text-primary font-semibold">
+                        {message.user.username.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Link>
                 ) : (
                   <div className="w-10" />
                 )}
@@ -102,14 +106,16 @@ export function MessageList({ messages, isLoading, currentUserId }: MessageListP
               <div className="flex-1 min-w-0">
                 {showAvatar && (
                   <div className="flex items-baseline gap-2 mb-1">
-                    <span
-                      className={`font-semibold text-sm ${
-                        isCurrentUser ? "text-primary" : "text-foreground"
-                      }`}
-                      data-testid={`message-username-${message.id}`}
-                    >
-                      {message.user.username}
-                    </span>
+                    <Link href={`/profile/${message.userId}`}>
+                      <span
+                        className={`font-semibold text-sm cursor-pointer hover:underline ${
+                          isCurrentUser ? "text-primary" : "text-foreground"
+                        }`}
+                        data-testid={`message-username-${message.id}`}
+                      >
+                        {message.user.username}
+                      </span>
+                    </Link>
                     <span
                       className="text-xs text-muted-foreground"
                       data-testid={`message-timestamp-${message.id}`}

@@ -23,6 +23,7 @@ export default function SettingsPage() {
     defaultValues: {
       username: user?.username || "",
       displayName: user?.displayName || "",
+      bio: user?.bio || "",
     },
   });
 
@@ -113,6 +114,19 @@ export default function SettingsPage() {
                       <FormLabel>Display Name</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder="How you want to be seen" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={profileForm.control}
+                  name="bio"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bio</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Tell us about yourself" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
