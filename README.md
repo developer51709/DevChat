@@ -105,21 +105,33 @@ Planned improvements:
 
 - [x] Profile & account settings
 
-- [x] Modile friendly UI
+- [x] Mobile friendly UI
 
 - [ ] Account recovery options
 
-- [ ] Real-time messaging (WebSockets or similar)
+- [x] Real-time messaging (WebSockets or similar)
 
 - [ ] UI improvements and theming
 
 - [ ] Better error handling and validation
 
-- [ ] Staff roles and channels
+- [x] Staff roles
+
+- [ ] Staff only channels
 
 - [ ] DM channels
 
-- [ ] SQLite database
+- [x] SQLite database
+
+- [ ] Moderation actions with logging
+
+- [ ] A full admin management page
+
+- [ ] File sharing
+      
+  - [ ] Virus/Malware detection
+  
+  - [ ] Inappropriate content filtering
 
 ## 🤝 Contributing
 Contributions, ideas, and suggestions are welcome.
