@@ -72,6 +72,9 @@ export function MessageList({ messages, isLoading, currentUserId }: MessageListP
     onSuccess: () => {
       toast({ title: "Message removed by moderator" });
     },
+    onError: (error: Error) => {
+      toast({ title: "Moderation failed", description: error.message, variant: "destructive" });
+    }
   });
 
   if (isLoading) {
@@ -196,27 +199,50 @@ export function MessageList({ messages, isLoading, currentUserId }: MessageListP
                 )}
               </div>
 
-              {isCurrentUser && !isEditing && (
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8"
-                    onClick={() => {
-                      setEditingId(message.id);
-                      setEditContent(message.content);
-                    }}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 text-destructive hover:text-destructive"
-                    onClick={() => deleteMutation.mutate(message.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+              {!isEditing && (
+                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {isCurrentUser ? (
+                    <div className="flex items-center">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                          setEditingId(message.id);
+                          setEditContent(message.content);
+                        }}
+                        data-testid={`button-edit-message-${message.id}`}
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() => deleteMutation.mutate(message.id)}
+                        data-testid={`button-delete-message-${message.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : isStaff ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem 
+                          className="text-destructive"
+                          onClick={() => deleteModMutation.mutate(message.id)}
+                        >
+                          <Trash className="mr-2 h-4 w-4" />
+                          Remove Message
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : null}
                 </div>
               )}
             </div>
