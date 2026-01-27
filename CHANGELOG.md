@@ -2,22 +2,36 @@
 
 <details>
   <summary>January 24, 2026</summary>
-  - Added account/profile settings
-  <br>- Added a more mobile friendly UI
-  <br>- Created <code>CHANGELOG.md</code> file
+  <ul>
+    <li>Added account/profile settings</li>
+    <li>Added a more mobile friendly UI</li>
+    <li>Created <code>CHANGELOG.md</code> file</li>
+  </ul>
 </details>
 <details>
   <summary>January 25, 2026</summary>
-  - Updated chat to show display names by default
-  <br>- Added user profile pages
-  <br>- Added profile badges for admin/moderator accounts
-  <br>- Added bio section to account/profile settings
-  <br>- Added admin account setup
-  <br>- Limited chanel creation to admin users only
-  <br>- Added channel editing and deletion endpoints
-  <br>- Added UI buttons for the channel management endpoints
+  <ul>
+    <li>Updated chat to show display names by default</li>
+    <li>Added user profile pages</li>
+    <li>Added profile badges for admin/moderator accounts</li>
+    <li>Added bio section to account/profile settings</li>
+    <li>Added admin account setup</li>
+    <li>Limited chanel creation to admin users only</li>
+    <li>Added channel editing and deletion endpoints</li>
+    <li>Added UI buttons for the channel management endpoints</li>
+  </ul>
 </details>
 <details>
   <summary>January 26, 2026</summary>
-  - Updated website open graph tags
+  <ul>
+    <li>Updated website open graph tags</li>
+  </ul>
+</details>
+<details>
+  <summary>January 27, 2026</summary>
+  <ul>
+    <li>Added admin page option in settings</li>
+    <li>Added moderation actions</li>
+    <li>Started implementing the admin page</li>
+  </ul>
 </details>
