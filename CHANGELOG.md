@@ -32,6 +32,8 @@
   <ul>
     <li>Added admin page option in settings</li>
     <li>Added moderation actions</li>
-    <li>Started implementing the admin page</li>
+    <li>Implemented the admin page</li>
+    <li>Added user management tab to the admin page</li>
+    <li>Added moderation logs tab to the admin page</li>
   </ul>
 </details>
