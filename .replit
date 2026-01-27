@@ -50,3 +50,4 @@ args = "npx update-browserslist-db@latest"
 
 [agent]
 integrations = ["javascript_database:1.0.0", "javascript_auth_all_persistance:1.0.0", "javascript_websocket:1.0.0"]
+expertMode = true

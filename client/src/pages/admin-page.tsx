@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { User, insertUserSchema } from "@shared/schema";
+import { User, ModerationLogWithUser } from "@shared/schema";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import {
   Table,
@@ -76,7 +76,7 @@ export default function AdminPage() {
     return <Redirect to="/" />;
   }
 
-  if (isLoading) {
+  if (usersLoading || logsLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
