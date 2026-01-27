@@ -250,8 +250,30 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(users);
   }
 
-  async deleteUser(id: string): Promise<void> {
-    await db.delete(users).where(eq(users.id, id));
+  async getModerationLogs(): Promise<ModerationLogWithUser[]> {
+    const result = await db
+      .select({
+        id: moderationLogs.id,
+        action: moderationLogs.action,
+        targetId: moderationLogs.targetId,
+        reason: moderationLogs.reason,
+        adminId: moderationLogs.adminId,
+        createdAt: moderationLogs.createdAt,
+        admin: {
+          username: users.username,
+          displayName: users.displayName,
+        },
+      })
+      .from(moderationLogs)
+      .innerJoin(users, eq(moderationLogs.adminId, users.id))
+      .orderBy(desc(moderationLogs.createdAt));
+
+    return result;
+  }
+
+  async createModerationLog(log: InsertModerationLog): Promise<ModerationLog> {
+    const [newLog] = await db.insert(moderationLogs).values(log).returning();
+    return newLog;
   }
 }
 

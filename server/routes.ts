@@ -327,6 +327,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/admin/logs", requireAdmin, async (req, res) => {
+    try {
+      const logs = await storage.getModerationLogs();
+      res.json(logs);
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.delete("/api/moderation/messages/:id", requireAuth, async (req, res) => {
+    try {
+      if (req.user?.role !== "admin" && req.user?.role !== "moderator") {
+        return res.status(403).send("Unauthorized");
+      }
+
+      const message = await storage.getMessage(req.params.id);
+      if (!message) return res.status(404).send("Message not found");
+
+      await storage.deleteMessage(req.params.id);
+      await storage.createModerationLog({
+        action: "delete_message",
+        targetId: message.userId,
+        reason: req.body.reason || "No reason provided",
+        adminId: req.user!.id,
+      });
+
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: "DELETE_MESSAGE",
+            channelId: message.channelId,
+            messageId: req.params.id
+          }));
+        }
+      });
+
+      res.sendStatus(200);
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
+  });
+
   const httpServer = createServer(app);
 
   // WebSocket server setup on distinct path to avoid conflicts with Vite HMR

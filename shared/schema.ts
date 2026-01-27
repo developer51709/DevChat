@@ -108,6 +108,20 @@ export type ChannelWithCreator = Channel & {
   messageCount?: number;
 };
 
-export type MessageWithUser = Message & {
-  user: Pick<User, "id" | "username" | "displayName" | "role">;
+export const moderationLogs = sqliteTable("moderation_logs", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  action: text("action").notNull(), // 'delete_message', 'timeout_user', 'ban_user'
+  targetId: text("target_id").notNull(),
+  reason: text("reason"),
+  adminId: text("admin_id").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const insertModerationLogSchema = createInsertSchema(moderationLogs);
+export type ModerationLog = typeof moderationLogs.$inferSelect;
+export type InsertModerationLog = z.infer<typeof insertModerationLogSchema>;
+
+export type ModerationLogWithUser = ModerationLog & {
+  admin: Pick<User, "username" | "displayName">;
 };
+

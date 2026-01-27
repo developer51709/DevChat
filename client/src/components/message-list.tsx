@@ -1,18 +1,23 @@
 import { useEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, Pencil, Trash2, X, Check } from "lucide-react";
+import { Loader2, Pencil, Trash2, X, Check, MoreVertical, Trash, Edit2 } from "lucide-react";
 import { type MessageWithUser } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-
 import { Link } from "wouter";
-
 import { Badge } from "@/components/ui/badge";
 import { ShieldAlert, ShieldCheck } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/hooks/use-auth";
 
 interface MessageListProps {
   messages: MessageWithUser[];
@@ -53,6 +58,20 @@ export function MessageList({ messages, isLoading, currentUserId }: MessageListP
     onError: (error: Error) => {
       toast({ title: "Delete failed", description: error.message, variant: "destructive" });
     }
+  });
+
+  const { user: currentUser } = useAuth();
+  const isStaff = currentUser?.role === "admin" || currentUser?.role === "moderator";
+
+  const deleteModMutation = useMutation({
+    mutationFn: async (messageId: string) => {
+      await apiRequest("DELETE", `/api/moderation/messages/${messageId}`, {
+        reason: "Moderation action"
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Message removed by moderator" });
+    },
   });
 
   if (isLoading) {
