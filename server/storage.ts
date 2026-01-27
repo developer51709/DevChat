@@ -2,14 +2,18 @@ import {
   users,
   channels,
   messages,
+  moderationLogs,
   type User,
   type InsertUser,
   type Channel,
   type InsertChannel,
   type Message,
   type InsertMessage,
+  type ModerationLog,
+  type InsertModerationLog,
   type ChannelWithCreator,
   type MessageWithUser,
+  type ModerationLogWithUser,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
