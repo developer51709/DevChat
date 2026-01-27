@@ -11,8 +11,9 @@ import { EditChannelDialog } from "@/components/edit-channel-dialog";
 import { DeleteChannelDialog } from "@/components/delete-channel-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Menu, X as CloseIcon } from "lucide-react";
+import { Menu, X as CloseIcon, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 import {
   type ChannelWithCreator,
   type MessageWithUser,
@@ -247,14 +248,24 @@ export default function HomePage() {
           
           <div className="flex-1 truncate">
             {activeChannel ? (
-              <div>
-                <h1 className="text-base font-semibold text-foreground truncate">
-                  # {activeChannel.name}
-                </h1>
-                {activeChannel.description && (
-                  <p className="text-xs text-muted-foreground truncate">
-                    {activeChannel.description}
-                  </p>
+              <div className="flex items-center justify-between">
+                <div className="truncate">
+                  <h1 className="text-base font-semibold text-foreground truncate">
+                    # {activeChannel.name}
+                  </h1>
+                  {activeChannel.description && (
+                    <p className="text-xs text-muted-foreground truncate">
+                      {activeChannel.description}
+                    </p>
+                  )}
+                </div>
+                {isAdmin && (
+                  <Link href="/admin">
+                    <Button variant="ghost" size="sm" className="gap-2">
+                      <Shield className="h-4 w-4" />
+                      Admin
+                    </Button>
+                  </Link>
                 )}
               </div>
             ) : (

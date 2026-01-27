@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
-import { ChevronLeft, Trash2 } from "lucide-react";
+import { ChevronLeft, Trash2, Shield } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
@@ -17,6 +17,8 @@ export default function SettingsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+
+  const isAdmin = user?.role === "admin";
 
   const profileForm = useForm({
     resolver: zodResolver(updateProfileSchema),
@@ -84,6 +86,25 @@ export default function SettingsPage() {
           </Link>
           <h1 className="text-3xl font-bold">User Settings</h1>
         </div>
+
+        {isAdmin && (
+          <Card className="border-primary/50 bg-primary/5">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="space-y-1">
+                <CardTitle className="text-xl">Admin Controls</CardTitle>
+                <CardDescription>Administrative tools and management</CardDescription>
+              </div>
+              <Shield className="h-5 w-5 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <Link href="/admin">
+                <Button variant="default" className="w-full sm:w-auto">
+                  Go to Admin Dashboard
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>

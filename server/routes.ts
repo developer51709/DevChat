@@ -292,6 +292,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/admin/users", requireAdmin, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users.map(({ password, ...user }) => user));
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.patch("/api/admin/users/:id/role", requireAdmin, async (req, res) => {
+    try {
+      const { role } = req.body;
+      if (!["user", "moderator", "admin"].includes(role)) {
+        return res.status(400).send("Invalid role");
+      }
+      const user = await storage.updateUser(req.params.id, { role });
+      const { password, ...safeUser } = user;
+      res.json(safeUser);
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.delete("/api/admin/users/:id", requireAdmin, async (req, res) => {
+    try {
+      if (req.params.id === req.user!.id) {
+        return res.status(400).send("Cannot delete yourself");
+      }
+      await storage.deleteUser(req.params.id);
+      res.sendStatus(200);
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
+  });
+
   const httpServer = createServer(app);
 
   // WebSocket server setup on distinct path to avoid conflicts with Vite HMR
