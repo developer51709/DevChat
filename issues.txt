@@ -2,3 +2,4 @@
 - There is no way to start a DM conversation with someone
 - There is no way to rebuild the database if it gets deleted
 - There is no database recovery methods for corrupted databases
+- On mobile browsers the channel list panel does not close when you click out of it
