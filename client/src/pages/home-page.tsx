@@ -54,6 +54,7 @@ export default function HomePage() {
 
   const { data: channels = [], isLoading: channelsLoading } = useQuery<ChannelWithCreator[]>({
     queryKey: ["/api/channels"],
+    enabled: !!user,
   });
 
   const { data: conversations = [] } = useQuery<User[]>({
