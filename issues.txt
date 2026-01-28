@@ -1,0 +1,2 @@
+- The edit channel button is broken
+- There is no way to start a DM conversation with someone
