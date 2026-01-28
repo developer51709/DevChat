@@ -34,6 +34,9 @@ export function Sidebar({
   isLoading,
   isAdmin,
 }: SidebarProps) {
+  const safeChannels = Array.isArray(channels) ? channels : [];
+  const safeConversations = Array.isArray(conversations) ? conversations : [];
+
   return (
     <div className="flex flex-col h-full bg-[#2b2d31] text-[#949ba4]">
       <div className="p-4 shadow-sm flex items-center justify-between">
@@ -63,7 +66,7 @@ export function Sidebar({
                 <Skeleton key={i} className="h-8 w-full bg-white/5 mx-2" />
               ))
             ) : (
-              channels.map((channel) => (
+              safeChannels.map((channel) => (
                 <button
                   key={channel.id}
                   onClick={() => onChannelSelect(channel.id)}
@@ -100,10 +103,10 @@ export function Sidebar({
             </span>
           </div>
           <div className="space-y-[2px]">
-            {conversations.length === 0 ? (
+            {safeConversations.length === 0 ? (
               <p className="px-2 text-xs italic opacity-50">No DMs yet</p>
             ) : (
-              conversations.map((convUser) => (
+              safeConversations.map((convUser) => (
                 <button
                   key={convUser.id}
                   onClick={() => onDMSelect(convUser.id)}

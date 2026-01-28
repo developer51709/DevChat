@@ -52,14 +52,18 @@ export default function HomePage() {
 
   useWebSocket(handleWebSocketMessage, !!user);
 
-  const { data: channels = [], isLoading: channelsLoading } = useQuery<ChannelWithCreator[]>({
+  // Fetch channels
+  const { data: channelsData = [], isLoading: channelsLoading } = useQuery<ChannelWithCreator[]>({
     queryKey: ["/api/channels"],
   });
+  const channels = Array.isArray(channelsData) ? channelsData : [];
 
-  const { data: conversations = [] } = useQuery<User[]>({
+  // Fetch conversations
+  const { data: conversationsData = [] } = useQuery<User[]>({
     queryKey: ["/api/dms/conversations"],
     enabled: !!user,
   });
+  const conversations = Array.isArray(conversationsData) ? conversationsData : [];
 
   // Fetch messages for active channel
   const { data: channelMessagesData = [], isLoading: messagesLoading } = useQuery<MessageWithUser[]>({
