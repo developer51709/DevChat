@@ -109,6 +109,13 @@ export default function HomePage() {
       setIsCreateChannelOpen(false);
       toast({ title: "Channel created", description: `#${newChannel.name} has been created successfully` });
     },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to create channel",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const sendMessageMutation = useMutation({
