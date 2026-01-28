@@ -4,3 +4,4 @@
 - There is no database recovery methods for corrupted databases
 - On mobile browsers the channel list panel does not close when you click out of it
 - There is no way to recover accounts if you forget the password
+- The UI needs some slight improvements
