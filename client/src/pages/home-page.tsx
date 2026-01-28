@@ -61,10 +61,12 @@ export default function HomePage() {
     enabled: !!user,
   });
 
-  const { data: channelMessages = [], isLoading: messagesLoading } = useQuery<MessageWithUser[]>({
+  // Fetch messages for active channel
+  const { data: channelMessagesData = [], isLoading: messagesLoading } = useQuery<MessageWithUser[]>({
     queryKey: ["/api/channels", activeChannelId, "messages"],
     enabled: viewMode === "channel" && !!activeChannelId,
   });
+  const channelMessages = Array.isArray(channelMessagesData) ? channelMessagesData : [];
 
   const { data: dmMessages = [], isLoading: dmsLoading } = useQuery<DirectMessageWithUsers[]>({
     queryKey: ["/api/dms", activeDMUserId],
