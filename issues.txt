@@ -1,2 +1,4 @@
 - The edit channel button is broken
 - There is no way to start a DM conversation with someone
+- There is no way to rebuild the database if it gets deleted
+- There is no database recovery methods for corrupted databases
