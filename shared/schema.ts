@@ -140,6 +140,10 @@ export type Channel = typeof channels.$inferSelect;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
 
+export type MessageWithUser = Message & {
+  user: Pick<User, "id" | "username" | "displayName">;
+};
+
 // Extended types for API responses
 export type ChannelWithCreator = Channel & {
   creator: Pick<User, "id" | "username">;

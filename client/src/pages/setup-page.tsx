@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, setAuthToken } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,10 +40,12 @@ export default function SetupPage() {
   const setupMutation = useMutation({
     mutationFn: async (data: { username: string; password: string }) => {
       const res = await apiRequest("POST", "/api/setup/admin", data);
-      return res.json();
+      const result = await res.json();
+      setAuthToken(result.token);
+      return result.user;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    onSuccess: (user) => {
+      queryClient.setQueryData(["/api/user"], user);
       queryClient.invalidateQueries({ queryKey: ["/api/setup/status"] });
       toast({
         title: "Setup Complete",
