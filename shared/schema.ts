@@ -40,11 +40,49 @@ export const messages = sqliteTable("messages", {
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
 });
 
+// Direct Messages table
+export const directMessages = sqliteTable("direct_messages", {
+  id: text("id").primaryKey().$defaultFn(generateId),
+  content: text("content").notNull(),
+  senderId: text("sender_id").notNull().references(() => users.id),
+  receiverId: text("receiver_id").notNull().references(() => users.id),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   channels: many(channels),
   messages: many(messages),
+  sentDirectMessages: many(directMessages, { relationName: "sender" }),
+  receivedDirectMessages: many(directMessages, { relationName: "receiver" }),
 }));
+
+export const directMessagesRelations = relations(directMessages, ({ one }) => ({
+  sender: one(users, {
+    fields: [directMessages.senderId],
+    references: [users.id],
+    relationName: "sender",
+  }),
+  receiver: one(users, {
+    fields: [directMessages.receiverId],
+    references: [users.id],
+    relationName: "receiver",
+  }),
+}));
+
+export const insertDirectMessageSchema = createInsertSchema(directMessages).omit({
+  id: true,
+  senderId: true,
+  createdAt: true,
+});
+
+export type InsertDirectMessage = z.infer<typeof insertDirectMessageSchema>;
+export type DirectMessage = typeof directMessages.$inferSelect;
+
+export type DirectMessageWithUsers = DirectMessage & {
+  sender: Pick<User, "id" | "username" | "displayName">;
+  receiver: Pick<User, "id" | "username" | "displayName">;
+};
 
 export const channelsRelations = relations(channels, ({ one, many }) => ({
   creator: one(users, {

@@ -7,6 +7,7 @@ import { setupAuth, hashPassword, comparePasswords } from "./auth";
 import {
   insertChannelSchema,
   insertMessageSchema,
+  insertDirectMessageSchema,
   updateProfileSchema,
   updatePasswordSchema,
   type MessageWithUser,
@@ -337,35 +338,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.delete("/api/moderation/messages/:id", requireAuth, async (req, res) => {
+    // ... existing implementation
+  });
+
+  // Direct Message routes
+  app.get("/api/dms/conversations", requireAuth, async (req, res) => {
     try {
-      if (req.user?.role !== "admin" && req.user?.role !== "moderator") {
-        return res.status(403).send("Unauthorized");
-      }
+      const conversations = await storage.getRecentConversations(req.user!.id);
+      res.json(conversations.map(({ password, ...user }) => user));
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
+  });
 
-      const message = await storage.getMessage(req.params.id);
-      if (!message) return res.status(404).send("Message not found");
+  app.get("/api/dms/:userId", requireAuth, async (req, res) => {
+    try {
+      const messages = await storage.getDirectMessages(req.user!.id, req.params.userId);
+      res.json(messages);
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
+  });
 
-      await storage.deleteMessage(req.params.id);
-      await storage.createModerationLog({
-        action: "delete_message",
-        targetId: message.userId,
-        reason: req.body.reason || "No reason provided",
-        adminId: req.user!.id,
-      });
-
+  app.post("/api/dms", requireAuth, async (req, res) => {
+    try {
+      const validatedData = insertDirectMessageSchema.parse(req.body);
+      const dm = await storage.createDirectMessage(validatedData, req.user!.id);
+      
+      // Broadcast via WebSocket
       wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
           client.send(JSON.stringify({
-            type: "DELETE_MESSAGE",
-            channelId: message.channelId,
-            messageId: req.params.id
+            type: "NEW_DM",
+            dm
           }));
         }
       });
 
-      res.sendStatus(200);
+      res.status(201).json(dm);
     } catch (error: any) {
-      res.status(500).send(error.message);
+      res.status(400).send(error.message);
     }
   });
 

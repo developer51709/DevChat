@@ -3,6 +3,7 @@ import {
   channels,
   messages,
   moderationLogs,
+  directMessages,
   type User,
   type InsertUser,
   type Channel,
@@ -11,12 +12,15 @@ import {
   type InsertMessage,
   type ModerationLog,
   type InsertModerationLog,
+  type DirectMessage,
+  type InsertDirectMessage,
   type ChannelWithCreator,
   type MessageWithUser,
   type ModerationLogWithUser,
+  type DirectMessageWithUsers,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, or, and } from "drizzle-orm";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 
@@ -49,6 +53,11 @@ export interface IStorage {
   // Profile methods
   updateUser(id: string, data: Partial<User>): Promise<User>;
   deleteUser(id: string): Promise<void>;
+
+  // Direct Message methods
+  getDirectMessages(userId1: string, userId2: string): Promise<DirectMessageWithUsers[]>;
+  createDirectMessage(dm: InsertDirectMessage, senderId: string): Promise<DirectMessage>;
+  getRecentConversations(userId: string): Promise<User[]>;
 
   // Session store
   sessionStore: session.SessionStore;
@@ -278,6 +287,77 @@ export class DatabaseStorage implements IStorage {
   async createModerationLog(log: InsertModerationLog): Promise<ModerationLog> {
     const [newLog] = await db.insert(moderationLogs).values(log).returning();
     return newLog;
+  }
+
+  async getDirectMessages(userId1: string, userId2: string): Promise<DirectMessageWithUsers[]> {
+    const result = await db
+      .select({
+        id: directMessages.id,
+        content: directMessages.content,
+        senderId: directMessages.senderId,
+        receiverId: directMessages.receiverId,
+        createdAt: directMessages.createdAt,
+        sender: {
+          id: users.id,
+          username: users.username,
+          displayName: users.displayName,
+        },
+      })
+      .from(directMessages)
+      .innerJoin(users, eq(directMessages.senderId, users.id))
+      .where(
+        or(
+          and(eq(directMessages.senderId, userId1), eq(directMessages.receiverId, userId2)),
+          and(eq(directMessages.senderId, userId2), eq(directMessages.receiverId, userId1))
+        )
+      )
+      .orderBy(directMessages.createdAt);
+
+    // We need to fetch receiver info too, but simplified for now to match the pattern
+    // In a real app we'd join twice or use relations
+    const dmsWithUsers = await Promise.all(result.map(async (r) => {
+      const receiver = await this.getUser(r.receiverId);
+      return {
+        ...r,
+        sender: r.sender,
+        receiver: receiver ? { id: receiver.id, username: receiver.username, displayName: receiver.displayName } : { id: r.receiverId, username: "Unknown", displayName: "Unknown" }
+      } as DirectMessageWithUsers;
+    }));
+
+    return dmsWithUsers;
+  }
+
+  async createDirectMessage(insertDm: InsertDirectMessage, senderId: string): Promise<DirectMessage> {
+    const [dm] = await db
+      .insert(directMessages)
+      .values({
+        ...insertDm,
+        senderId,
+      })
+      .returning();
+    return dm;
+  }
+
+  async getRecentConversations(userId: string): Promise<User[]> {
+    // Get distinct users who have sent or received messages with the current user
+    const sentTo = await db
+      .select({ id: directMessages.receiverId })
+      .from(directMessages)
+      .where(eq(directMessages.senderId, userId));
+    
+    const receivedFrom = await db
+      .select({ id: directMessages.senderId })
+      .from(directMessages)
+      .where(eq(directMessages.receiverId, userId));
+
+    const uniqueUserIds = Array.from(new Set([...sentTo.map(u => u.id), ...receivedFrom.map(u => u.id)]));
+    
+    if (uniqueUserIds.length === 0) return [];
+
+    return await db
+      .select()
+      .from(users)
+      .where(or(...uniqueUserIds.map(id => eq(users.id, id))));
   }
 }
 
