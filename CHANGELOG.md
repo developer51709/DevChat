@@ -35,5 +35,7 @@
     <li>Implemented the admin page</li>
     <li>Added user management tab to the admin page</li>
     <li>Added moderation logs tab to the admin page</li>
+    <li>Started implementing DM channels</li>
+    <li>Added token based authentication</li>
   </ul>
 </details>
