@@ -21,12 +21,16 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, or, and } from "drizzle-orm";
-import session from "express-session";
-import createMemoryStore from "memorystore";
+import { randomBytes } from "crypto";
 
-const MemoryStore = createMemoryStore(session);
+const authTokens = new Map<string, { userId: string; expiresAt: Date }>();
 
 export interface IStorage {
+  // Auth token methods
+  createAuthToken(userId: string): string;
+  getUserByToken(token: string): Promise<User | undefined>;
+  deleteAuthToken(token: string): void;
+
   // Setup methods
   hasAdminUser(): Promise<boolean>;
   createAdminUser(user: InsertUser): Promise<User>;
@@ -58,18 +62,28 @@ export interface IStorage {
   getDirectMessages(userId1: string, userId2: string): Promise<DirectMessageWithUsers[]>;
   createDirectMessage(dm: InsertDirectMessage, senderId: string): Promise<DirectMessage>;
   getRecentConversations(userId: string): Promise<User[]>;
-
-  // Session store
-  sessionStore: any;
 }
 
 export class DatabaseStorage implements IStorage {
-  sessionStore: any;
+  createAuthToken(userId: string): string {
+    const token = randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    authTokens.set(token, { userId, expiresAt });
+    return token;
+  }
 
-  constructor() {
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000,
-    });
+  async getUserByToken(token: string): Promise<User | undefined> {
+    const tokenData = authTokens.get(token);
+    if (!tokenData) return undefined;
+    if (new Date() > tokenData.expiresAt) {
+      authTokens.delete(token);
+      return undefined;
+    }
+    return this.getUser(tokenData.userId);
+  }
+
+  deleteAuthToken(token: string): void {
+    authTokens.delete(token);
   }
 
   async hasAdminUser(): Promise<boolean> {

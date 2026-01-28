@@ -52,25 +52,20 @@ export default function HomePage() {
 
   useWebSocket(handleWebSocketMessage, !!user);
 
-  // Fetch channels
-  const { data: channelsData = [], isLoading: channelsLoading } = useQuery<ChannelWithCreator[]>({
+  const { data: channels = [], isLoading: channelsLoading } = useQuery<ChannelWithCreator[]>({
     queryKey: ["/api/channels"],
+    enabled: !!user,
   });
-  const channels = Array.isArray(channelsData) ? channelsData : [];
 
-  // Fetch conversations
-  const { data: conversationsData = [] } = useQuery<User[]>({
+  const { data: conversations = [] } = useQuery<User[]>({
     queryKey: ["/api/dms/conversations"],
     enabled: !!user,
   });
-  const conversations = Array.isArray(conversationsData) ? conversationsData : [];
 
-  // Fetch messages for active channel
-  const { data: channelMessagesData = [], isLoading: messagesLoading } = useQuery<MessageWithUser[]>({
+  const { data: channelMessages = [], isLoading: messagesLoading } = useQuery<MessageWithUser[]>({
     queryKey: ["/api/channels", activeChannelId, "messages"],
     enabled: viewMode === "channel" && !!activeChannelId,
   });
-  const channelMessages = Array.isArray(channelMessagesData) ? channelMessagesData : [];
 
   const { data: dmMessages = [], isLoading: dmsLoading } = useQuery<DirectMessageWithUsers[]>({
     queryKey: ["/api/dms", activeDMUserId],
@@ -108,13 +103,6 @@ export default function HomePage() {
       setActiveChannelId(newChannel.id);
       setIsCreateChannelOpen(false);
       toast({ title: "Channel created", description: `#${newChannel.name} has been created successfully` });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Failed to create channel",
-        description: error.message,
-        variant: "destructive",
-      });
     },
   });
 
