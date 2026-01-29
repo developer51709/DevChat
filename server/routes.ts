@@ -7,6 +7,7 @@ import {
   insertChannelSchema,
   insertMessageSchema,
   insertDirectMessageSchema,
+  insertReportSchema,
   updateProfileSchema,
   updatePasswordSchema,
   type MessageWithUser,
@@ -281,8 +282,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/users", requireAdmin, async (req, res) => {
     try {
-      const users = await storage.getAllUsers();
-      res.json(users.map(({ password, ...user }) => user));
+      const usersList = await storage.getAllUsers();
+      res.json(usersList.map(({ password, ...user }) => user));
     } catch (error: any) {
       res.status(500).send(error.message);
     }
@@ -337,33 +338,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/dms/:userId", requireAuth, async (req, res) => {
+  app.get("/api/admin/reports", requireAdmin, async (req, res) => {
     try {
-      const messages = await storage.getDirectMessages(req.user!.id, req.params.userId);
-      res.json(messages);
+      const reports = await storage.getReports();
+      res.json(reports);
     } catch (error: any) {
       res.status(500).send(error.message);
     }
   });
 
-  app.post("/api/dms", requireAuth, async (req, res) => {
+  app.post("/api/reports", requireAuth, async (req, res) => {
     try {
-      const validatedData = insertDirectMessageSchema.parse(req.body);
-      const dm = await storage.createDirectMessage(validatedData, req.user!.id);
-      
-      // Broadcast via WebSocket
-      wss.clients.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify({
-            type: "NEW_DM",
-            dm
-          }));
-        }
-      });
-
-      res.status(201).json(dm);
+      const validatedData = insertReportSchema.parse(req.body);
+      const report = await storage.createReport(validatedData, req.user!.id);
+      res.status(201).json(report);
     } catch (error: any) {
       res.status(400).send(error.message);
+    }
+  });
+
+  app.patch("/api/admin/reports/:id", requireAdmin, async (req, res) => {
+    try {
+      const { status } = req.body;
+      await storage.updateReportStatus(req.params.id, status);
+      res.sendStatus(200);
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/admin/users/:id/ban", requireAdmin, async (req, res) => {
+    try {
+      const { reason } = req.body;
+      await storage.banUser(req.params.id, req.user!.id, reason);
+      res.sendStatus(200);
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/admin/users/:id/timeout", requireAuth, async (req, res) => {
+    try {
+      if (req.user!.role !== "admin" && req.user!.role !== "moderator") {
+        return res.status(403).send("Moderator access required");
+      }
+      const { until, reason } = req.body;
+      await storage.timeoutUser(req.params.id, new Date(until), req.user!.id, reason);
+      res.sendStatus(200);
+    } catch (error: any) {
+      res.status(500).send(error.message);
     }
   });
 

@@ -4,6 +4,7 @@ import {
   messages,
   moderationLogs,
   directMessages,
+  reports,
   type User,
   type InsertUser,
   type Channel,
@@ -18,6 +19,9 @@ import {
   type MessageWithUser,
   type ModerationLogWithUser,
   type DirectMessageWithUsers,
+  type Report,
+  type InsertReport,
+  type ReportWithDetails,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, or, and } from "drizzle-orm";
@@ -365,7 +369,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRecentConversations(userId: string): Promise<User[]> {
-    // Get distinct users who have sent or received messages with the current user
     const sentTo = await db
       .select({ id: directMessages.receiverId })
       .from(directMessages)
@@ -384,6 +387,94 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(users)
       .where(or(...uniqueUserIds.map(id => eq(users.id, id))));
+  }
+
+  async getReports(): Promise<ReportWithDetails[]> {
+    const result = await db
+      .select({
+        id: reports.id,
+        reporterId: reports.reporterId,
+        targetUserId: reports.targetUserId,
+        targetMessageId: reports.targetMessageId,
+        reason: reports.reason,
+        status: reports.status,
+        createdAt: reports.createdAt,
+        reporter: {
+          username: users.username,
+          displayName: users.displayName,
+        },
+      })
+      .from(reports)
+      .innerJoin(users, eq(reports.reporterId, users.id))
+      .orderBy(desc(reports.createdAt));
+
+    const reportsWithDetails = await Promise.all(
+      result.map(async (r) => {
+        let targetUser;
+        if (r.targetUserId) {
+          const u = await this.getUser(r.targetUserId);
+          if (u) {
+            targetUser = { username: u.username, displayName: u.displayName };
+          }
+        }
+
+        let targetMessage;
+        if (r.targetMessageId) {
+          const m = await this.getMessage(r.targetMessageId);
+          if (m) {
+            const u = await this.getUser(m.userId);
+            targetMessage = {
+              ...m,
+              user: u ? { username: u.username, displayName: u.displayName } : { username: "Unknown", displayName: "Unknown" },
+            };
+          }
+        }
+
+        return {
+          ...r,
+          reporter: r.reporter,
+          targetUser,
+          targetMessage,
+        } as ReportWithDetails;
+      })
+    );
+
+    return reportsWithDetails;
+  }
+
+  async createReport(report: InsertReport, reporterId: string): Promise<Report> {
+    const [newReport] = await db
+      .insert(reports)
+      .values({
+        ...report,
+        reporterId,
+      })
+      .returning();
+    return newReport;
+  }
+
+  async updateReportStatus(id: string, status: string): Promise<void> {
+    await db.update(reports).set({ status }).where(eq(reports.id, id));
+  }
+
+  async banUser(id: string, adminId: string, reason?: string): Promise<void> {
+    await db.update(users).set({ isBanned: true }).where(eq(users.id, id));
+    await this.createModerationLog({
+      action: "ban_user",
+      targetId: id,
+      reason: reason || "No reason provided",
+      adminId,
+    });
+  }
+
+  async timeoutUser(id: string, until: Date, adminId: string, reason?: string): Promise<void> {
+    await db.update(users).set({ timeoutUntil: until }).where(eq(users.id, id));
+    await this.createModerationLog({
+      action: "timeout_user",
+      targetId: id,
+      reason: reason || `Timeout until ${until.toISOString()}`,
+      adminId,
+    });
   }
 }
 

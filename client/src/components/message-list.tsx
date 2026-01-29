@@ -32,6 +32,49 @@ export function MessageList({ messages, isLoading, currentUserId, onStartDM }: M
   const { toast } = useToast();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
+  const [reportMessageId, setReportMessageId] = useState<string | null>(null);
+  const [reportReason, setReportReason] = useState("");
+  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+
+  const reportMutation = useMutation({
+    mutationFn: async (data: { targetMessageId?: string; targetUserId?: string; reason: string }) => {
+      await apiRequest("POST", "/api/reports", data);
+    },
+    onSuccess: () => {
+      toast({ title: "Report submitted", description: "Thank you for helping keep our community safe." });
+      setIsReportDialogOpen(false);
+      setReportReason("");
+    },
+    onError: (error: Error) => {
+      toast({ title: "Report failed", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const banMutation = useMutation({
+    mutationFn: async ({ userId, reason }: { userId: string; reason: string }) => {
+      await apiRequest("POST", `/api/admin/users/${userId}/ban`, { reason });
+    },
+    onSuccess: () => {
+      toast({ title: "User banned" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Ban failed", description: error.message, variant: "destructive" });
+    }
+  });
+
+  const timeoutMutation = useMutation({
+    mutationFn: async ({ userId, until, reason }: { userId: string; until: string; reason: string }) => {
+      await apiRequest("POST", `/api/admin/users/${userId}/timeout`, { until, reason });
+    },
+    onSuccess: () => {
+      toast({ title: "User timed out" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Timeout failed", description: error.message, variant: "destructive" });
+    }
+  });
 
   useEffect(() => {
     if (messages.length > prevMessagesLengthRef.current) {
@@ -241,6 +284,45 @@ export function MessageList({ messages, isLoading, currentUserId, onStartDM }: M
                           <Trash className="mr-2 h-4 w-4" />
                           Remove Message
                         </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => {
+                            setReportMessageId(message.id);
+                            setIsReportDialogOpen(true);
+                          }}
+                        >
+                          <Flag className="mr-2 h-4 w-4" />
+                          Report Message
+                        </DropdownMenuItem>
+                        {isStaff && (
+                          <>
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                const reason = window.prompt("Reason for timeout?");
+                                if (reason) {
+                                  const until = new Date(Date.now() + 3600000).toISOString(); // 1 hour
+                                  timeoutMutation.mutate({ userId: message.userId, until, reason });
+                                }
+                              }}
+                            >
+                              <Clock className="mr-2 h-4 w-4" />
+                              Timeout User (1h)
+                            </DropdownMenuItem>
+                            {(currentUser as any)?.role === "admin" && (
+                              <DropdownMenuItem 
+                                className="text-destructive"
+                                onClick={() => {
+                                  const reason = window.prompt("Reason for ban?");
+                                  if (reason) {
+                                    banMutation.mutate({ userId: message.userId, reason });
+                                  }
+                                }}
+                              >
+                                <Ban className="mr-2 h-4 w-4" />
+                                Ban User
+                              </DropdownMenuItem>
+                            )}
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   ) : (
@@ -261,6 +343,30 @@ export function MessageList({ messages, isLoading, currentUserId, onStartDM }: M
         })}
         <div ref={scrollRef} />
       </div>
+
+      {isReportDialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-[#313338] p-6 rounded-lg border border-[#1f2124] w-full max-w-md shadow-xl">
+            <h2 className="text-xl font-bold text-white mb-4">Report Message</h2>
+            <textarea
+              className="w-full bg-[#1e1f22] border border-[#1f2124] rounded-md p-3 text-white mb-4 focus:outline-none focus:ring-1 focus:ring-primary"
+              placeholder="Why are you reporting this message?"
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              rows={4}
+            />
+            <div className="flex justify-end gap-3">
+              <Button variant="ghost" onClick={() => setIsReportDialogOpen(false)}>Cancel</Button>
+              <Button 
+                onClick={() => reportMutation.mutate({ targetMessageId: reportMessageId!, reason: reportReason })}
+                disabled={!reportReason || reportMutation.isPending}
+              >
+                Submit Report
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </ScrollArea>
   );
 }

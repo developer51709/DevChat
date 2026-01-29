@@ -181,12 +181,11 @@ export default function HomePage() {
     }
   };
 
-  const activeChannel = channels.find((c) => c.id === activeChannelId);
-  const activeDMUser = conversations.find((u) => u.id === activeDMUserId);
-
-  // Fallback to avoid empty state if data is still loading or undefined
   const safeChannels = Array.isArray(channels) ? channels : [];
   const safeConversations = Array.isArray(conversations) ? conversations : [];
+
+  const activeChannel = safeChannels.find((c) => c.id === activeChannelId);
+  const activeDMUser = safeConversations.find((u) => u.id === activeDMUserId);
 
   return (
     <div className="h-screen flex bg-background overflow-hidden relative">
