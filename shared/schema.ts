@@ -19,6 +19,8 @@ export const users = sqliteTable("users", {
   password: text("password").notNull(),
   role: text("role").$type<UserRole>().default("user").notNull(),
   bio: text("bio"),
+  isBanned: integer("is_banned", { mode: "boolean" }).default(false).notNull(),
+  timeoutUntil: integer("timeout_until", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
 });
 
@@ -49,7 +51,36 @@ export const directMessages = sqliteTable("direct_messages", {
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
 });
 
-// Relations
+// Reports table
+export const reports = sqliteTable("reports", {
+  id: text("id").primaryKey().$defaultFn(generateId),
+  reporterId: text("reporter_id").notNull().references(() => users.id),
+  targetUserId: text("target_user_id").references(() => users.id),
+  targetMessageId: text("target_message_id").references(() => messages.id),
+  reason: text("reason").notNull(),
+  status: text("status").notNull().default("pending"), // 'pending', 'resolved', 'dismissed'
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
+});
+
+export const insertReportSchema = createInsertSchema(reports).omit({
+  id: true,
+  reporterId: true,
+  createdAt: true,
+  status: true,
+});
+
+export type Report = typeof reports.$inferSelect;
+export type InsertReport = z.infer<typeof insertReportSchema>;
+
+export type ReportWithDetails = Report & {
+  reporter: Pick<User, "username" | "displayName">;
+  targetUser?: Pick<User, "username" | "displayName">;
+  targetMessage?: Message & { user: Pick<User, "username" | "displayName"> };
+};
+
+// Users table extension via Partial/Type is better but for Drizzle we edit directly
+// Actually I'll just keep users as is and handle bans/timeouts via a logic check in auth/storage
+// But wait, the user wants ban/timeout. I should add these fields to users table.
 export const usersRelations = relations(users, ({ many }) => ({
   channels: many(channels),
   messages: many(messages),

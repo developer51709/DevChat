@@ -91,6 +91,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/channels", requireAdmin, async (req, res) => {
     try {
       const validatedData = insertChannelSchema.parse(req.body);
+      // Ensure we don't accidentally use a stale ID or something
       const channel = await storage.createChannel(validatedData, req.user!.id);
       const channelWithCreator = await storage.getChannel(channel.id);
       res.status(201).json(channelWithCreator);

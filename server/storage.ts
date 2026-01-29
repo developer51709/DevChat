@@ -61,7 +61,14 @@ export interface IStorage {
   // Direct Message methods
   getDirectMessages(userId1: string, userId2: string): Promise<DirectMessageWithUsers[]>;
   createDirectMessage(dm: InsertDirectMessage, senderId: string): Promise<DirectMessage>;
-  getRecentConversations(userId: string): Promise<User[]>;
+  // Report methods
+  getReports(): Promise<ReportWithDetails[]>;
+  createReport(report: InsertReport, reporterId: string): Promise<Report>;
+  updateReportStatus(id: string, status: string): Promise<void>;
+
+  // Moderation methods
+  banUser(id: string, adminId: string, reason?: string): Promise<void>;
+  timeoutUser(id: string, until: Date, adminId: string, reason?: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {

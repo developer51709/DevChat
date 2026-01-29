@@ -291,6 +291,13 @@ export default function HomePage() {
         </main>
       </div>
 
+      <CreateChannelDialog
+        open={isCreateChannelOpen}
+        onOpenChange={setIsCreateChannelOpen}
+        onCreateChannel={(data) => createChannelMutation.mutate(data)}
+        isPending={createChannelMutation.isPending}
+      />
+
       <EditChannelDialog
         open={isEditChannelOpen}
         onOpenChange={setIsEditChannelOpen}
