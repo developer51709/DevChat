@@ -334,14 +334,13 @@
     /* sits in front of content */
   }
 
-  .hover-elevate:hover:not(.no-default-hover-elevate)::after,
-  .active-elevate:active:not(.no-default-active-elevate)::after {
-    background-color: var(--elevate-1);
+  .hover-elevate:hover {
+    @apply -translate-y-[1px] brightness-110;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   }
-
-  .hover-elevate-2:hover:not(.no-default-hover-elevate)::after,
-  .active-elevate-2:active:not(.no-default-active-elevate)::after {
-    background-color: var(--elevate-2);
+  .active-elevate-2:active {
+    @apply translate-y-[0px] brightness-90;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 
   /* If there's a 1px border, adjust the inset so that it covers that parent's border */

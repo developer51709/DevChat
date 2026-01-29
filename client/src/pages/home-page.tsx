@@ -184,6 +184,10 @@ export default function HomePage() {
   const activeChannel = channels.find((c) => c.id === activeChannelId);
   const activeDMUser = conversations.find((u) => u.id === activeDMUserId);
 
+  // Fallback to avoid empty state if data is still loading or undefined
+  const safeChannels = Array.isArray(channels) ? channels : [];
+  const safeConversations = Array.isArray(conversations) ? conversations : [];
+
   return (
     <div className="h-screen flex bg-background overflow-hidden relative">
       {/* Mobile Sidebar Overlay */}
@@ -215,11 +219,11 @@ export default function HomePage() {
             />
           </div>
           {user && (
-            <UserProfile
-              user={user}
-              messageCount={0}
-              onLogout={() => logoutMutation.mutate()}
-            />
+              <UserProfile
+                user={user as any}
+                messageCount={0}
+                onLogout={() => logoutMutation.mutate()}
+              />
           )}
         </div>
       </div>
