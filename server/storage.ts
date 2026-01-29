@@ -319,6 +319,7 @@ export class DatabaseStorage implements IStorage {
           id: users.id,
           username: users.username,
           displayName: users.displayName,
+          role: users.role,
         },
       })
       .from(directMessages)
@@ -338,7 +339,7 @@ export class DatabaseStorage implements IStorage {
       return {
         ...r,
         sender: r.sender,
-        receiver: receiver ? { id: receiver.id, username: receiver.username, displayName: receiver.displayName } : { id: r.receiverId, username: "Unknown", displayName: "Unknown" }
+        receiver: receiver ? { id: receiver.id, username: receiver.username, displayName: receiver.displayName, role: receiver.role } : { id: r.receiverId, username: "Unknown", displayName: "Unknown", role: "user" as const }
       } as DirectMessageWithUsers;
     }));
 

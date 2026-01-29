@@ -104,6 +104,55 @@ export default function HomePage() {
       setIsCreateChannelOpen(false);
       toast({ title: "Channel created", description: `#${newChannel.name} has been created successfully` });
     },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to create channel",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const editChannelMutation = useMutation({
+    mutationFn: async (data: { name: string; description?: string }) => {
+      if (!selectedChannel) throw new Error("No channel selected");
+      const res = await apiRequest("PATCH", `/api/channels/${selectedChannel.id}`, data);
+      return await res.json();
+    },
+    onSuccess: (updatedChannel: ChannelWithCreator) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/channels"] });
+      setIsEditChannelOpen(false);
+      setSelectedChannel(updatedChannel);
+      toast({ title: "Channel updated", description: "The channel has been updated successfully" });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to update channel",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteChannelMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedChannel) throw new Error("No channel selected");
+      await apiRequest("DELETE", `/api/channels/${selectedChannel.id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/channels"] });
+      setIsDeleteChannelOpen(false);
+      setActiveChannelId(null);
+      setSelectedChannel(null);
+      toast({ title: "Channel deleted", description: "The channel has been deleted successfully" });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to delete channel",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const sendMessageMutation = useMutation({
@@ -137,6 +186,14 @@ export default function HomePage() {
 
   return (
     <div className="h-screen flex bg-background overflow-hidden relative">
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden" 
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       <div className={`
         fixed inset-y-0 left-0 w-72 bg-[#2b2d31] border-r border-border z-50 transform transition-transform duration-300 lg:relative lg:translate-x-0
         ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
@@ -191,7 +248,12 @@ export default function HomePage() {
         <main className="flex-1 flex flex-col min-h-0">
           {viewMode === "channel" && activeChannelId ? (
             <>
-              <MessageList messages={channelMessages} isLoading={messagesLoading} currentUserId={user?.id || ""} />
+              <MessageList 
+                messages={channelMessages} 
+                isLoading={messagesLoading} 
+                currentUserId={user?.id || ""} 
+                onStartDM={handleDMSelect}
+              />
               <MessageInput 
                 channelName={activeChannel?.name || ""} 
                 onSendMessage={handleSendMessage} 
@@ -204,10 +266,12 @@ export default function HomePage() {
                 messages={dmMessages.map(dm => ({
                   ...dm,
                   user: dm.sender,
-                  channelId: "dm"
+                  channelId: "dm",
+                  userId: dm.senderId
                 })) as any} 
                 isLoading={dmsLoading} 
                 currentUserId={user?.id || ""} 
+                onStartDM={handleDMSelect}
               />
               <MessageInput 
                 channelName={activeDMUser?.displayName || activeDMUser?.username || ""} 
@@ -223,11 +287,20 @@ export default function HomePage() {
         </main>
       </div>
 
-      <CreateChannelDialog 
-        open={isCreateChannelOpen} 
-        onOpenChange={setIsCreateChannelOpen} 
-        onCreateChannel={(n, d) => createChannelMutation.mutate({ name: n, description: d })} 
-        isPending={createChannelMutation.isPending} 
+      <EditChannelDialog
+        open={isEditChannelOpen}
+        onOpenChange={setIsEditChannelOpen}
+        channel={selectedChannel}
+        onEditChannel={(n, d) => editChannelMutation.mutate({ name: n, description: d })}
+        isPending={editChannelMutation.isPending}
+      />
+
+      <DeleteChannelDialog
+        open={isDeleteChannelOpen}
+        onOpenChange={setIsDeleteChannelOpen}
+        channel={selectedChannel}
+        onDeleteChannel={() => deleteChannelMutation.mutate()}
+        isPending={deleteChannelMutation.isPending}
       />
     </div>
   );

@@ -80,8 +80,8 @@ export type InsertDirectMessage = z.infer<typeof insertDirectMessageSchema>;
 export type DirectMessage = typeof directMessages.$inferSelect;
 
 export type DirectMessageWithUsers = DirectMessage & {
-  sender: Pick<User, "id" | "username" | "displayName">;
-  receiver: Pick<User, "id" | "username" | "displayName">;
+  sender: Pick<User, "id" | "username" | "displayName" | "role">;
+  receiver: Pick<User, "id" | "username" | "displayName" | "role">;
 };
 
 export const channelsRelations = relations(channels, ({ one, many }) => ({
@@ -141,7 +141,7 @@ export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
 
 export type MessageWithUser = Message & {
-  user: Pick<User, "id" | "username" | "displayName">;
+  user: Pick<User, "id" | "username" | "displayName" | "role">;
 };
 
 // Extended types for API responses

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, Pencil, Trash2, X, Check, MoreVertical, Trash, Edit2 } from "lucide-react";
-import { type MessageWithUser } from "@shared/schema";
+import { Loader2, Pencil, Trash2, X, Check, MoreVertical, Trash, Edit2, MessageSquare } from "lucide-react";
+import { type MessageWithUser, type User } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -23,9 +23,10 @@ interface MessageListProps {
   messages: MessageWithUser[];
   isLoading: boolean;
   currentUserId: string;
+  onStartDM?: (userId: string) => void;
 }
 
-export function MessageList({ messages, isLoading, currentUserId }: MessageListProps) {
+export function MessageList({ messages, isLoading, currentUserId, onStartDM }: MessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevMessagesLengthRef = useRef(messages.length);
   const { toast } = useToast();
@@ -242,7 +243,17 @@ export function MessageList({ messages, isLoading, currentUserId }: MessageListP
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  ) : null}
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-primary"
+                      onClick={() => onStartDM?.(message.user.id)}
+                      title="Send Direct Message"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
