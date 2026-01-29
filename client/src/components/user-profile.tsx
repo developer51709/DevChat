@@ -9,16 +9,22 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Settings, User as UserIcon } from "lucide-react";
+import { LogOut, Settings, User as UserIcon, MessageSquare, Flag } from "lucide-react";
 import { type User } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
 
 interface UserProfileProps {
-  user: User;
+  user: any;
   messageCount?: number;
   onLogout: () => void;
+  onStartDM?: (userId: string) => void;
 }
 
-export function UserProfile({ user, messageCount = 0, onLogout }: UserProfileProps) {
+export function UserProfile({ user, messageCount = 0, onLogout, onStartDM }: UserProfileProps) {
+  const { user: currentUser } = useAuth() as { user: any | null };
+  const isOwnProfile = currentUser?.id === user.id;
+
   return (
     <div className="p-4 border-t border-card-border bg-card">
       <DropdownMenu>
@@ -62,6 +68,32 @@ export function UserProfile({ user, messageCount = 0, onLogout }: UserProfilePro
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      
+      {!isOwnProfile && (
+        <div className="mt-4 flex flex-col gap-2">
+          <Button 
+            variant="outline" 
+            className="w-full justify-start gap-2 hover-elevate"
+            onClick={() => onStartDM?.(user.id)}
+          >
+            <MessageSquare className="h-4 w-4" />
+            Direct Message
+          </Button>
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start gap-2 text-red-400 hover:text-red-400 hover:bg-red-500/10 hover-elevate"
+            onClick={() => {
+               const reason = window.prompt("Reason for report?");
+               if (reason) {
+                 apiRequest("POST", "/api/reports", { targetUserId: user.id, reason });
+               }
+            }}
+          >
+            <Flag className="h-4 w-4" />
+            Report User
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

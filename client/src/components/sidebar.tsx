@@ -1,11 +1,21 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Hash, MessageSquare, Plus, Settings, Shield, User as UserIcon } from "lucide-react";
+import { Hash, MessageSquare, Plus, Settings, Shield, User as UserIcon, Flag, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { type ChannelWithCreator, type User } from "@shared/schema";
+import { type ChannelWithCreator, type User, type ReportWithDetails } from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
 
 interface SidebarProps {
   channels: ChannelWithCreator[];
@@ -127,7 +137,93 @@ export function Sidebar({
             )}
           </div>
         </div>
+
+        {isAdmin && (
+          <div className="pt-4 border-t border-white/5">
+            <ReportsDialog />
+          </div>
+        )}
       </div>
     </div>
+  );
+}
+
+function ReportsDialog() {
+  const { toast } = useToast();
+  const { data: reports = [], isLoading } = useQuery<ReportWithDetails[]>({
+    queryKey: ["/api/admin/reports"],
+  });
+
+  const resolveMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      await apiRequest("PATCH", `/api/admin/reports/${id}`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/reports"] });
+      toast({ title: "Report status updated" });
+    },
+  });
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="ghost" className="w-full justify-start gap-2 text-[#949ba4] hover:text-white">
+          <Shield className="h-4 w-4" />
+          Moderation Reports
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl bg-[#313338] border-[#1f2124] text-[#dbdee1]">
+        <DialogHeader>
+          <DialogTitle className="text-white">Pending Reports</DialogTitle>
+        </DialogHeader>
+        <ScrollArea className="h-[400px] pr-4">
+          <div className="space-y-4">
+            {isLoading ? (
+              <p>Loading reports...</p>
+            ) : reports.length === 0 ? (
+              <p className="text-center py-8 opacity-50">No reports found</p>
+            ) : (
+              reports.map((report) => (
+                <div key={report.id} className="p-4 bg-[#2b2d31] rounded-lg border border-[#1f2124]">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <span className="text-xs text-primary font-bold uppercase">{report.status}</span>
+                      <p className="text-sm">
+                        <span className="text-white font-semibold">{report.reporter.username}</span> reported{" "}
+                        {report.targetUser && (
+                          <span className="text-white font-semibold">{report.targetUser.username}</span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={() => resolveMutation.mutate({ id: report.id, status: "dismissed" })}
+                      >
+                        Dismiss
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        onClick={() => resolveMutation.mutate({ id: report.id, status: "resolved" })}
+                      >
+                        Resolve
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-sm text-[#dbdee1] italic">"{report.reason}"</p>
+                  {report.targetMessage && (
+                    <div className="mt-2 p-2 bg-[#1e1f22] rounded text-xs">
+                      <p className="opacity-50 mb-1">Reported Message:</p>
+                      <p>{report.targetMessage.content}</p>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
   );
 }

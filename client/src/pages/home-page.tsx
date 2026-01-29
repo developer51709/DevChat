@@ -23,7 +23,7 @@ import {
 } from "@shared/schema";
 
 export default function HomePage() {
-  const { user, logoutMutation } = useAuth();
+  const { user, logoutMutation } = useAuth() as { user: any | null; logoutMutation: any };
   const { toast } = useToast();
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
   const [activeDMUserId, setActiveDMUserId] = useState<string | null>(null);
@@ -173,6 +173,42 @@ export default function HomePage() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/messages/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/channels", activeChannelId, "messages"] });
+    },
+  });
+
+  const reportMutation = useMutation({
+    mutationFn: async (data: { targetMessageId?: string; targetUserId?: string; reason: string }) => {
+      await apiRequest("POST", "/api/reports", data);
+    },
+    onSuccess: () => {
+      toast({ title: "Report submitted" });
+    },
+  });
+
+  const banMutation = useMutation({
+    mutationFn: async ({ userId, reason }: { userId: string; reason: string }) => {
+      await apiRequest("POST", `/api/admin/users/${userId}/ban`, { reason });
+    },
+    onSuccess: () => {
+      toast({ title: "User banned" });
+    },
+  });
+
+  const timeoutMutation = useMutation({
+    mutationFn: async ({ userId, until, reason }: { userId: string; until: string; reason: string }) => {
+      await apiRequest("POST", `/api/admin/users/${userId}/timeout`, { until, reason });
+    },
+    onSuccess: () => {
+      toast({ title: "User timed out" });
+    },
+  });
+
   const handleSendMessage = (content: string) => {
     if (viewMode === "channel" && activeChannelId) {
       sendMessageMutation.mutate({ content, channelId: activeChannelId });
@@ -181,6 +217,7 @@ export default function HomePage() {
     }
   };
 
+  // Fallback to avoid empty state if data is still loading or undefined
   const safeChannels = Array.isArray(channels) ? channels : [];
   const safeConversations = Array.isArray(conversations) ? conversations : [];
 
@@ -201,30 +238,31 @@ export default function HomePage() {
         fixed inset-y-0 left-0 w-72 bg-[#2b2d31] border-r border-border z-50 transform transition-transform duration-300 lg:relative lg:translate-x-0
         ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
       `}>
-        <div className="h-full flex flex-col">
-          <div className="flex-1 overflow-hidden">
-            <Sidebar
-              channels={channels}
-              conversations={conversations}
-              activeChannelId={activeChannelId}
-              activeDMUserId={activeDMUserId}
-              onChannelSelect={handleChannelSelect}
-              onDMSelect={handleDMSelect}
-              onCreateChannel={() => setIsCreateChannelOpen(true)}
-              onEditChannel={(c) => { setSelectedChannel(c); setIsEditChannelOpen(true); }}
-              onDeleteChannel={(c) => { setSelectedChannel(c); setIsDeleteChannelOpen(true); }}
-              isLoading={channelsLoading}
-              isAdmin={isAdmin}
-            />
-          </div>
-          {user && (
+          <div className="h-full flex flex-col">
+            <div className="flex-1 overflow-hidden">
+              <Sidebar
+                channels={channels}
+                conversations={conversations}
+                activeChannelId={activeChannelId}
+                activeDMUserId={activeDMUserId}
+                onChannelSelect={handleChannelSelect}
+                onDMSelect={handleDMSelect}
+                onCreateChannel={() => setIsCreateChannelOpen(true)}
+                onEditChannel={(c) => { setSelectedChannel(c); setIsEditChannelOpen(true); }}
+                onDeleteChannel={(c) => { setSelectedChannel(c); setIsDeleteChannelOpen(true); }}
+                isLoading={channelsLoading}
+                isAdmin={isAdmin}
+              />
+            </div>
+            {user && (
               <UserProfile
                 user={user as any}
                 messageCount={0}
                 onLogout={() => logoutMutation.mutate()}
+                onStartDM={handleDMSelect}
               />
-          )}
-        </div>
+            )}
+          </div>
       </div>
 
       <div className="flex-1 flex flex-col min-w-0 bg-[#313338]">
@@ -249,39 +287,60 @@ export default function HomePage() {
         </header>
 
         <main className="flex-1 flex flex-col min-h-0">
-          {viewMode === "channel" && activeChannelId ? (
-            <>
-              <MessageList 
-                messages={channelMessages} 
-                isLoading={messagesLoading} 
-                currentUserId={user?.id || ""} 
-                onStartDM={handleDMSelect}
-              />
-              <MessageInput 
-                channelName={activeChannel?.name || ""} 
-                onSendMessage={handleSendMessage} 
-                disabled={sendMessageMutation.isPending} 
-              />
-            </>
-          ) : viewMode === "dm" && activeDMUserId ? (
-            <>
-              <MessageList 
-                messages={dmMessages.map(dm => ({
-                  ...dm,
-                  user: dm.sender,
-                  channelId: "dm",
-                  userId: dm.senderId
-                })) as any} 
-                isLoading={dmsLoading} 
-                currentUserId={user?.id || ""} 
-                onStartDM={handleDMSelect}
-              />
-              <MessageInput 
-                channelName={activeDMUser?.displayName || activeDMUser?.username || ""} 
-                onSendMessage={handleSendMessage} 
-                disabled={sendMessageMutation.isPending} 
-              />
-            </>
+            {viewMode === "channel" && activeChannelId ? (
+              <>
+                <MessageList 
+                  messages={channelMessages} 
+                  isLoading={messagesLoading} 
+                  currentUserId={user?.id || ""} 
+                  onStartDM={handleDMSelect}
+                  isAdmin={isAdmin}
+                  onDelete={(id) => deleteMutation.mutate(id)}
+                  onReport={(id) => {
+                    const reason = window.prompt("Reason for report?");
+                    if (reason) {
+                      reportMutation.mutate({ targetMessageId: id, reason });
+                    }
+                  }}
+                  onTimeout={(userId) => {
+                    const reason = window.prompt("Reason for timeout?");
+                    if (reason) {
+                      const until = new Date(Date.now() + 3600000).toISOString();
+                      timeoutMutation.mutate({ userId, until, reason });
+                    }
+                  }}
+                  onBan={(userId) => {
+                    const reason = window.prompt("Reason for ban?");
+                    if (reason) {
+                      banMutation.mutate({ userId, reason });
+                    }
+                  }}
+                />
+                <MessageInput 
+                  channelName={activeChannel?.name || ""} 
+                  onSendMessage={handleSendMessage} 
+                  disabled={sendMessageMutation.isPending} 
+                />
+              </>
+            ) : viewMode === "dm" && activeDMUserId ? (
+              <>
+                <MessageList 
+                  messages={dmMessages.map(dm => ({
+                    ...dm,
+                    user: dm.sender,
+                    channelId: "dm",
+                    userId: dm.senderId
+                  })) as any} 
+                  isLoading={dmsLoading} 
+                  currentUserId={user?.id || ""} 
+                  onStartDM={handleDMSelect}
+                />
+                <MessageInput 
+                  channelName={activeDMUser?.displayName || activeDMUser?.username || ""} 
+                  onSendMessage={handleSendMessage} 
+                  disabled={sendMessageMutation.isPending} 
+                />
+              </>
           ) : (
             <div className="flex-1 flex items-center justify-center p-4">
               <p className="text-[#949ba4]">Select a channel or message to get started</p>

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, Pencil, Trash2, X, Check, MoreVertical, Trash, Edit2, MessageSquare } from "lucide-react";
+import { Loader2, X, Check, MoreVertical, Trash, Edit2, MessageSquare, Flag, Clock, Ban, Trash2 } from "lucide-react";
 import { type MessageWithUser, type User } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -24,9 +24,24 @@ interface MessageListProps {
   isLoading: boolean;
   currentUserId: string;
   onStartDM?: (userId: string) => void;
+  onReport?: (messageId: string) => void;
+  onDelete?: (messageId: string) => void;
+  onTimeout?: (userId: string) => void;
+  onBan?: (userId: string) => void;
+  isAdmin?: boolean;
 }
 
-export function MessageList({ messages, isLoading, currentUserId, onStartDM }: MessageListProps) {
+export function MessageList({
+  messages,
+  isLoading,
+  currentUserId,
+  onStartDM,
+  onReport,
+  onDelete,
+  onTimeout,
+  onBan,
+  isAdmin,
+}: MessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevMessagesLengthRef = useRef(messages.length);
   const { toast } = useToast();
@@ -35,6 +50,9 @@ export function MessageList({ messages, isLoading, currentUserId, onStartDM }: M
   const [reportMessageId, setReportMessageId] = useState<string | null>(null);
   const [reportReason, setReportReason] = useState("");
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+
+  const { user: currentUser } = useAuth() as { user: any | null };
+  const isStaff = currentUser?.role === "admin" || currentUser?.role === "moderator";
 
   const reportMutation = useMutation({
     mutationFn: async (data: { targetMessageId?: string; targetUserId?: string; reason: string }) => {
@@ -76,13 +94,6 @@ export function MessageList({ messages, isLoading, currentUserId, onStartDM }: M
     }
   });
 
-  useEffect(() => {
-    if (messages.length > prevMessagesLengthRef.current) {
-      scrollRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-    prevMessagesLengthRef.current = messages.length;
-  }, [messages.length]);
-
   const updateMutation = useMutation({
     mutationFn: async ({ id, content }: { id: string; content: string }) => {
       await apiRequest("PATCH", `/api/messages/${id}`, { content });
@@ -99,13 +110,13 @@ export function MessageList({ messages, isLoading, currentUserId, onStartDM }: M
     mutationFn: async (id: string) => {
       await apiRequest("DELETE", `/api/messages/${id}`);
     },
+    onSuccess: () => {
+      toast({ title: "Message deleted" });
+    },
     onError: (error: Error) => {
       toast({ title: "Delete failed", description: error.message, variant: "destructive" });
     }
   });
-
-  const { user: currentUser } = useAuth();
-  const isStaff = currentUser?.role === "admin" || currentUser?.role === "moderator";
 
   const deleteModMutation = useMutation({
     mutationFn: async (messageId: string) => {
@@ -120,6 +131,13 @@ export function MessageList({ messages, isLoading, currentUserId, onStartDM }: M
       toast({ title: "Moderation failed", description: error.message, variant: "destructive" });
     }
   });
+
+  useEffect(() => {
+    if (messages.length > prevMessagesLengthRef.current) {
+      scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+    prevMessagesLengthRef.current = messages.length;
+  }, [messages.length]);
 
   if (isLoading) {
     return (
@@ -307,7 +325,7 @@ export function MessageList({ messages, isLoading, currentUserId, onStartDM }: M
                               <Clock className="mr-2 h-4 w-4" />
                               Timeout User (1h)
                             </DropdownMenuItem>
-                            {(currentUser as any)?.role === "admin" && (
+                            {currentUser?.role === "admin" && (
                               <DropdownMenuItem 
                                 className="text-destructive"
                                 onClick={() => {
