@@ -1,86 +1,70 @@
 import { sql } from "drizzle-orm";
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { pgTable, text, integer, varchar, timestamp, boolean } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Helper function to generate UUID
-const generateId = () => crypto.randomUUID();
-
-// User roles
-export const userRoles = ["user", "moderator", "admin"] as const;
-export type UserRole = typeof userRoles[number];
-
 // Users table
-export const users = sqliteTable("users", {
-  id: text("id").primaryKey().$defaultFn(generateId),
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
   displayName: text("display_name"),
   password: text("password").notNull(),
-  role: text("role").$type<UserRole>().default("user").notNull(),
+  role: text("role").$type<"user" | "moderator" | "admin">().default("user").notNull(),
   bio: text("bio"),
-  isBanned: integer("is_banned", { mode: "boolean" }).default(false).notNull(),
-  timeoutUntil: integer("timeout_until", { mode: "timestamp" }),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
+  isBanned: boolean("is_banned").default(false).notNull(),
+  timeoutUntil: timestamp("timeout_until"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Channels table
-export const channels = sqliteTable("channels", {
-  id: text("id").primaryKey().$defaultFn(generateId),
+export const channels = pgTable("channels", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   description: text("description"),
-  createdBy: text("created_by").notNull().references(() => users.id),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Messages table
-export const messages = sqliteTable("messages", {
-  id: text("id").primaryKey().$defaultFn(generateId),
+export const messages = pgTable("messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   content: text("content").notNull(),
-  channelId: text("channel_id").notNull().references(() => channels.id, { onDelete: "cascade" }),
-  userId: text("user_id").notNull().references(() => users.id),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
+  channelId: varchar("channel_id").notNull().references(() => channels.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Direct Messages table
-export const directMessages = sqliteTable("direct_messages", {
-  id: text("id").primaryKey().$defaultFn(generateId),
+export const directMessages = pgTable("direct_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   content: text("content").notNull(),
-  senderId: text("sender_id").notNull().references(() => users.id),
-  receiverId: text("receiver_id").notNull().references(() => users.id),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
+  senderId: varchar("sender_id").notNull().references(() => users.id),
+  receiverId: varchar("receiver_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Reports table
-export const reports = sqliteTable("reports", {
-  id: text("id").primaryKey().$defaultFn(generateId),
-  reporterId: text("reporter_id").notNull().references(() => users.id),
-  targetUserId: text("target_user_id").references(() => users.id),
-  targetMessageId: text("target_message_id").references(() => messages.id),
+export const reports = pgTable("reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  reporterId: varchar("reporter_id").notNull().references(() => users.id),
+  targetUserId: varchar("target_user_id").references(() => users.id),
+  targetMessageId: varchar("target_message_id").references(() => messages.id),
   reason: text("reason").notNull(),
   status: text("status").notNull().default("pending"), // 'pending', 'resolved', 'dismissed'
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const insertReportSchema = createInsertSchema(reports).omit({
-  id: true,
-  reporterId: true,
-  createdAt: true,
-  status: true,
+export const moderationLogs = pgTable("moderation_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  action: text("action").notNull(), // 'delete_message', 'timeout_user', 'ban_user'
+  targetId: text("target_id").notNull(),
+  reason: text("reason"),
+  adminId: varchar("admin_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export type Report = typeof reports.$inferSelect;
-export type InsertReport = z.infer<typeof insertReportSchema>;
-
-export type ReportWithDetails = Report & {
-  reporter: Pick<User, "username" | "displayName">;
-  targetUser?: Pick<User, "username" | "displayName">;
-  targetMessage?: Message & { user: Pick<User, "username" | "displayName"> };
-};
-
-// Users table extension via Partial/Type is better but for Drizzle we edit directly
-// Actually I'll just keep users as is and handle bans/timeouts via a logic check in auth/storage
-// But wait, the user wants ban/timeout. I should add these fields to users table.
+// Relations
 export const usersRelations = relations(users, ({ many }) => ({
   channels: many(channels),
   messages: many(messages),
@@ -101,20 +85,6 @@ export const directMessagesRelations = relations(directMessages, ({ one }) => ({
   }),
 }));
 
-export const insertDirectMessageSchema = createInsertSchema(directMessages).omit({
-  id: true,
-  senderId: true,
-  createdAt: true,
-});
-
-export type InsertDirectMessage = z.infer<typeof insertDirectMessageSchema>;
-export type DirectMessage = typeof directMessages.$inferSelect;
-
-export type DirectMessageWithUsers = DirectMessage & {
-  sender: Pick<User, "id" | "username" | "displayName" | "role">;
-  receiver: Pick<User, "id" | "username" | "displayName" | "role">;
-};
-
 export const channelsRelations = relations(channels, ({ one, many }) => ({
   creator: one(users, {
     fields: [channels.createdBy],
@@ -134,7 +104,7 @@ export const messagesRelations = relations(messages, ({ one }) => ({
   }),
 }));
 
-// Insert schemas
+// Schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -152,6 +122,19 @@ export const insertMessageSchema = createInsertSchema(messages).omit({
   createdAt: true,
 });
 
+export const insertDirectMessageSchema = createInsertSchema(directMessages).omit({
+  id: true,
+  senderId: true,
+  createdAt: true,
+});
+
+export const insertReportSchema = createInsertSchema(reports).omit({
+  id: true,
+  reporterId: true,
+  createdAt: true,
+  status: true,
+});
+
 export const updateProfileSchema = z.object({
   username: z.string().min(3).optional(),
   displayName: z.string().min(1).optional(),
@@ -164,37 +147,38 @@ export const updatePasswordSchema = z.object({
 });
 
 // Types
-export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
-export type InsertChannel = z.infer<typeof insertChannelSchema>;
+export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Channel = typeof channels.$inferSelect;
-export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type InsertChannel = z.infer<typeof insertChannelSchema>;
 export type Message = typeof messages.$inferSelect;
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type DirectMessage = typeof directMessages.$inferSelect;
+export type InsertDirectMessage = z.infer<typeof insertDirectMessageSchema>;
+export type Report = typeof reports.$inferSelect;
+export type InsertReport = z.infer<typeof insertReportSchema>;
+export type ModerationLog = typeof moderationLogs.$inferSelect;
 
 export type MessageWithUser = Message & {
   user: Pick<User, "id" | "username" | "displayName" | "role">;
 };
 
-// Extended types for API responses
 export type ChannelWithCreator = Channel & {
   creator: Pick<User, "id" | "username">;
   messageCount?: number;
 };
 
-export const moderationLogs = sqliteTable("moderation_logs", {
-  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  action: text("action").notNull(), // 'delete_message', 'timeout_user', 'ban_user'
-  targetId: text("target_id").notNull(),
-  reason: text("reason"),
-  adminId: text("admin_id").notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`CURRENT_TIMESTAMP`),
-});
+export type DirectMessageWithUsers = DirectMessage & {
+  sender: Pick<User, "id" | "username" | "displayName" | "role">;
+  receiver: Pick<User, "id" | "username" | "displayName" | "role">;
+};
 
-export const insertModerationLogSchema = createInsertSchema(moderationLogs);
-export type ModerationLog = typeof moderationLogs.$inferSelect;
-export type InsertModerationLog = z.infer<typeof insertModerationLogSchema>;
+export type ReportWithDetails = Report & {
+  reporter: Pick<User, "username" | "displayName">;
+  targetUser?: Pick<User, "username" | "displayName">;
+  targetMessage?: Message & { user: Pick<User, "username" | "displayName"> };
+};
 
 export type ModerationLogWithUser = ModerationLog & {
   admin: Pick<User, "username" | "displayName">;
 };
-

@@ -389,6 +389,10 @@ export class DatabaseStorage implements IStorage {
       .where(or(...uniqueUserIds.map(id => eq(users.id, id))));
   }
 
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
   async getReports(): Promise<ReportWithDetails[]> {
     const result = await db
       .select({
