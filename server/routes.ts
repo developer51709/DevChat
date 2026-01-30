@@ -92,7 +92,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/channels", requireAdmin, async (req, res) => {
     try {
       const validatedData = insertChannelSchema.parse(req.body);
-      // Ensure we don't accidentally use a stale ID or something
       const channel = await storage.createChannel(validatedData, req.user!.id);
       const channelWithCreator = await storage.getChannel(channel.id);
       res.status(201).json(channelWithCreator);
@@ -325,7 +324,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.delete("/api/moderation/messages/:id", requireAuth, async (req, res) => {
-    // ... existing implementation
+    try {
+      if (req.user!.role !== "admin" && req.user!.role !== "moderator") {
+        return res.status(403).send("Moderator access required");
+      }
+      const { reason } = req.body;
+      const message = await storage.getMessage(req.params.id);
+      if (!message) return res.status(404).send("Message not found");
+
+      await storage.deleteMessage(req.params.id);
+      await storage.createModerationLog({
+        action: "delete_message",
+        targetId: req.params.id,
+        reason: reason || "Moderation action",
+        adminId: req.user!.id,
+      });
+
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: "DELETE_MESSAGE",
+            channelId: message.channelId,
+            messageId: req.params.id
+          }));
+        }
+      });
+
+      res.sendStatus(200);
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
   });
 
   // Direct Message routes

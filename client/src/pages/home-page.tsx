@@ -352,7 +352,7 @@ export default function HomePage() {
       <CreateChannelDialog
         open={isCreateChannelOpen}
         onOpenChange={setIsCreateChannelOpen}
-        onCreateChannel={(data) => createChannelMutation.mutate(data)}
+        onCreateChannel={(name, description) => createChannelMutation.mutate({ name, description })}
         isPending={createChannelMutation.isPending}
       />
 
