@@ -43,6 +43,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  getAllUsers(): Promise<User[]>;
 
   // Channel methods
   getChannels(): Promise<ChannelWithCreator[]>;
@@ -65,6 +66,8 @@ export interface IStorage {
   // Direct Message methods
   getDirectMessages(userId1: string, userId2: string): Promise<DirectMessageWithUsers[]>;
   createDirectMessage(dm: InsertDirectMessage, senderId: string): Promise<DirectMessage>;
+  getRecentConversations(userId: string): Promise<User[]>;
+
   // Report methods
   getReports(): Promise<ReportWithDetails[]>;
   createReport(report: InsertReport, reporterId: string): Promise<Report>;
@@ -73,6 +76,8 @@ export interface IStorage {
   // Moderation methods
   banUser(id: string, adminId: string, reason?: string): Promise<void>;
   timeoutUser(id: string, until: Date, adminId: string, reason?: string): Promise<void>;
+  getModerationLogs(): Promise<ModerationLogWithUser[]>;
+  createModerationLog(log: InsertModerationLog): Promise<ModerationLog>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -126,6 +131,10 @@ export class DatabaseStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
   }
 
   async getChannels(): Promise<ChannelWithCreator[]> {
@@ -288,10 +297,6 @@ export class DatabaseStorage implements IStorage {
     await db.delete(users).where(eq(users.id, id));
   }
 
-  async getAllUsers(): Promise<User[]> {
-    return await db.select().from(users);
-  }
-
   async getModerationLogs(): Promise<ModerationLogWithUser[]> {
     const result = await db
       .select({
@@ -343,8 +348,6 @@ export class DatabaseStorage implements IStorage {
       )
       .orderBy(directMessages.createdAt);
 
-    // We need to fetch receiver info too, but simplified for now to match the pattern
-    // In a real app we'd join twice or use relations
     const dmsWithUsers = await Promise.all(result.map(async (r) => {
       const receiver = await this.getUser(r.receiverId);
       return {
@@ -387,10 +390,6 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(users)
       .where(or(...uniqueUserIds.map(id => eq(users.id, id))));
-  }
-
-  async getAllUsers(): Promise<User[]> {
-    return await db.select().from(users);
   }
 
   async getReports(): Promise<ReportWithDetails[]> {

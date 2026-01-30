@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, integer, varchar, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, boolean, varchar } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -104,7 +104,7 @@ export const messagesRelations = relations(messages, ({ one }) => ({
   }),
 }));
 
-// Schemas
+// Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -135,6 +135,8 @@ export const insertReportSchema = createInsertSchema(reports).omit({
   status: true,
 });
 
+export const insertModerationLogSchema = createInsertSchema(moderationLogs);
+
 export const updateProfileSchema = z.object({
   username: z.string().min(3).optional(),
   displayName: z.string().min(1).optional(),
@@ -158,6 +160,7 @@ export type InsertDirectMessage = z.infer<typeof insertDirectMessageSchema>;
 export type Report = typeof reports.$inferSelect;
 export type InsertReport = z.infer<typeof insertReportSchema>;
 export type ModerationLog = typeof moderationLogs.$inferSelect;
+export type InsertModerationLog = z.infer<typeof insertModerationLogSchema>;
 
 export type MessageWithUser = Message & {
   user: Pick<User, "id" | "username" | "displayName" | "role">;
