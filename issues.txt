@@ -1,7 +1,3 @@
-- The edit channel button is broken
-- There is no way to start a DM conversation with someone even though the feature has been implemented
-- There is no way to rebuild the database if it gets deleted
-- There is no database recovery methods for corrupted databases
-- On mobile browsers the channel list panel does not close when you click out of it
-- There is no way to recover accounts if you forget the password
-- The UI needs some slight improvements
+- When you create a channel it is setting the name as the channel ID and the description as the name
+- The report button is not visible to normal users
+- The bans and timeouts do not do anything
