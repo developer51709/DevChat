@@ -229,12 +229,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Account settings routes
   app.patch("/api/user/profile", requireAuth, async (req, res) => {
     try {
       const data = updateProfileSchema.parse(req.body);
       const user = await storage.updateUser(req.user!.id, data);
-      res.json(user);
+      
+      const { password: _, ...safeUser } = user;
+      
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: "USER_UPDATE",
+            user: safeUser
+          }));
+        }
+      });
+      
+      res.json(safeUser);
+    } catch (error: any) {
+      res.status(400).send(error.message);
+    }
+  });
+
+  app.post("/api/admin/users/:id/unban", requireAdmin, async (req, res) => {
+    try {
+      await storage.updateUser(req.params.id, { isBanned: false });
+      await storage.createModerationLog({
+        action: "unban_user",
+        targetId: req.params.id,
+        reason: "Admin action",
+        adminId: req.user!.id,
+      });
+      res.sendStatus(200);
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/admin/users/:id/untimeout", requireAuth, async (req, res) => {
+    try {
+      if (req.user!.role !== "admin" && req.user!.role !== "moderator") {
+        return res.status(403).send("Moderator access required");
+      }
+      await storage.updateUser(req.params.id, { timeoutUntil: null });
+      await storage.createModerationLog({
+        action: "untimeout_user",
+        targetId: req.params.id,
+        reason: "Moderator action",
+        adminId: req.user!.id,
+      });
+      res.sendStatus(200);
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/dms", requireAuth, async (req, res) => {
+    try {
+      const validatedData = insertDirectMessageSchema.parse(req.body);
+      const dm = await storage.createDirectMessage(validatedData, req.user!.id);
+      
+      const sender = req.user!;
+      const receiver = await storage.getUser(dm.receiverId);
+      
+      const dmWithUsers = {
+        ...dm,
+        sender: { id: sender.id, username: sender.username, displayName: sender.displayName, role: sender.role },
+        receiver: receiver ? { id: receiver.id, username: receiver.username, displayName: receiver.displayName, role: receiver.role } : null
+      };
+
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: "NEW_DM",
+            dm: dmWithUsers
+          }));
+        }
+      });
+
+      res.status(201).json(dm);
     } catch (error: any) {
       res.status(400).send(error.message);
     }

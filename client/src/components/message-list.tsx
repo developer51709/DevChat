@@ -263,96 +263,95 @@ export function MessageList({
 
               {!isEditing && (
                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {isCurrentUser ? (
-                    <div className="flex items-center">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        onClick={() => {
-                          setEditingId(message.id);
-                          setEditContent(message.content);
-                        }}
-                        data-testid={`button-edit-message-${message.id}`}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => deleteMutation.mutate(message.id)}
-                        data-testid={`button-delete-message-${message.id}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : isStaff ? (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem 
-                          className="text-destructive"
-                          onClick={() => deleteModMutation.mutate(message.id)}
-                        >
-                          <Trash className="mr-2 h-4 w-4" />
-                          Remove Message
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => {
-                            setReportMessageId(message.id);
-                            setIsReportDialogOpen(true);
-                          }}
-                        >
-                          <Flag className="mr-2 h-4 w-4" />
-                          Report Message
-                        </DropdownMenuItem>
-                        {isStaff && (
-                          <>
+                  {!isEditing && (
+                    <>
+                      {isCurrentUser ? (
+                        <div className="flex items-center">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            onClick={() => {
+                              setEditingId(message.id);
+                              setEditContent(message.content);
+                            }}
+                            data-testid={`button-edit-message-${message.id}`}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={() => deleteMutation.mutate(message.id)}
+                            data-testid={`button-delete-message-${message.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
                             <DropdownMenuItem 
                               onClick={() => {
-                                const reason = window.prompt("Reason for timeout?");
-                                if (reason) {
-                                  const until = new Date(Date.now() + 3600000).toISOString(); // 1 hour
-                                  timeoutMutation.mutate({ userId: message.userId, until, reason });
-                                }
+                                setReportMessageId(message.id);
+                                setIsReportDialogOpen(true);
                               }}
                             >
-                              <Clock className="mr-2 h-4 w-4" />
-                              Timeout User (1h)
+                              <Flag className="mr-2 h-4 w-4" />
+                              Report Message
                             </DropdownMenuItem>
-                            {currentUser?.role === "admin" && (
-                              <DropdownMenuItem 
-                                className="text-destructive"
-                                onClick={() => {
-                                  const reason = window.prompt("Reason for ban?");
-                                  if (reason) {
-                                    banMutation.mutate({ userId: message.userId, reason });
-                                  }
-                                }}
-                              >
-                                <Ban className="mr-2 h-4 w-4" />
-                                Ban User
-                              </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onStartDM?.(message.user.id)}>
+                              <MessageSquare className="mr-2 h-4 w-4" />
+                              Send Direct Message
+                            </DropdownMenuItem>
+                            
+                            {isStaff && (
+                              <>
+                                <DropdownMenuItem 
+                                  className="text-destructive"
+                                  onClick={() => deleteModMutation.mutate(message.id)}
+                                >
+                                  <Trash className="mr-2 h-4 w-4" />
+                                  Remove Message
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => {
+                                    const reason = window.prompt("Reason for timeout?");
+                                    if (reason) {
+                                      const until = new Date(Date.now() + 3600000).toISOString(); // 1 hour
+                                      timeoutMutation.mutate({ userId: message.userId, until, reason });
+                                    }
+                                  }}
+                                >
+                                  <Clock className="mr-2 h-4 w-4" />
+                                  Timeout User (1h)
+                                </DropdownMenuItem>
+                                {currentUser?.role === "admin" && (
+                                  <DropdownMenuItem 
+                                    className="text-destructive"
+                                    onClick={() => {
+                                      const reason = window.prompt("Reason for ban?");
+                                      if (reason) {
+                                        banMutation.mutate({ userId: message.userId, reason });
+                                      }
+                                    }}
+                                  >
+                                    <Ban className="mr-2 h-4 w-4" />
+                                    Ban User
+                                  </DropdownMenuItem>
+                                )}
+                              </>
                             )}
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-primary"
-                      onClick={() => onStartDM?.(message.user.id)}
-                      title="Send Direct Message"
-                    >
-                      <MessageSquare className="h-4 w-4" />
-                    </Button>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </>
                   )}
                 </div>
               )}

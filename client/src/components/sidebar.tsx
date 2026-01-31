@@ -138,11 +138,17 @@ export function Sidebar({
           </div>
         </div>
 
-        {isAdmin && (
-          <div className="pt-4 border-t border-white/5">
-            <ReportsDialog />
-          </div>
-        )}
+        <div className="pt-4 border-t border-white/5 space-y-2">
+          <ReportsDialog />
+          {isAdmin && (
+            <Link href="/admin">
+              <Button variant="ghost" className="w-full justify-start gap-2 text-[#949ba4] hover:text-white">
+                <Shield className="h-4 w-4" />
+                Admin Dashboard
+              </Button>
+            </Link>
+          )}
+        </div>
       </div>
     </div>
   );

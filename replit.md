@@ -1,6 +1,14 @@
 # Discord Developers Board
 
-A real-time messaging board for Discord development teams built with modern fullstack JavaScript.
+A real-time messaging board for Discord development teams.
+
+## Recent Changes (Jan 31, 2026)
+- Migrated to PostgreSQL for robust data management.
+- Implemented full moderation suite: bans, timeouts, message removal, and audit logs.
+- Added real-time profile sync via WebSockets.
+- Fixed DM reliability and conversation list visibility.
+- Enabled moderation reporting for all users.
+- Added unban and untimeout functionality in the admin dashboard.
 
 ## Tech Stack
 

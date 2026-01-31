@@ -145,19 +145,42 @@ export default function AdminPage() {
                       </Select>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        disabled={user.id === currentUser.id || deleteUserMutation.isPending}
-                        onClick={() => {
-                          if (confirm(`Are you sure you want to delete ${user.username}?`)) {
-                            deleteUserMutation.mutate(user.id);
-                          }
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-primary hover:text-primary hover:bg-primary/10"
+                            onClick={async () => {
+                              if (user.isBanned) {
+                                if (confirm(`Unban ${user.username}?`)) {
+                                  await apiRequest("POST", `/api/admin/users/${user.id}/unban`, {});
+                                  queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+                                }
+                              } else if (user.timeoutUntil && new Date(user.timeoutUntil) > new Date()) {
+                                if (confirm(`Remove timeout for ${user.username}?`)) {
+                                  await apiRequest("POST", `/api/admin/users/${user.id}/untimeout`, {});
+                                  queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+                                }
+                              }
+                            }}
+                            disabled={!user.isBanned && (!user.timeoutUntil || new Date(user.timeoutUntil) <= new Date())}
+                          >
+                            <Shield className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            disabled={user.id === currentUser.id || deleteUserMutation.isPending}
+                            onClick={() => {
+                              if (confirm(`Are you sure you want to delete ${user.username}?`)) {
+                                deleteUserMutation.mutate(user.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                     </TableCell>
                   </TableRow>
                 ))}

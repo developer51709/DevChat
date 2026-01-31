@@ -47,8 +47,14 @@ export default function HomePage() {
       if (activeDMUserId === data.dm.senderId || activeDMUserId === data.dm.receiverId) {
         queryClient.invalidateQueries({ queryKey: ["/api/dms", activeDMUserId] });
       }
+    } else if (data.type === "USER_UPDATE") {
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/channels"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      // Invalidate messages to update display names
+      queryClient.invalidateQueries({ queryKey: ["/api/channels", activeChannelId, "messages"] });
     }
-  }, [activeDMUserId]);
+  }, [activeDMUserId, activeChannelId]);
 
   useWebSocket(handleWebSocketMessage, !!user);
 
@@ -91,6 +97,7 @@ export default function HomePage() {
     setActiveChannelId(null);
     setViewMode("dm");
     setIsSidebarOpen(false);
+    queryClient.invalidateQueries({ queryKey: ["/api/dms/conversations"] });
   };
 
   const createChannelMutation = useMutation({
@@ -171,6 +178,13 @@ export default function HomePage() {
         queryClient.invalidateQueries({ queryKey: ["/api/dms/conversations"] });
       }
     },
+    onError: (error: Error) => {
+      toast({
+        title: "Message failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   });
 
   const deleteMutation = useMutation({
