@@ -1,6 +1,3 @@
-- Direct message channels show up but the messages do not
-- The moderation reports button is showing up in the side panel for normal user accounts
-- Channels can be created and edited but there is no button to delete them once they are created
-- There are no emoji message reactions
-- There is no file sharing features
-- there is no way to report app related issues
+- Messages cannot be edited or deleted in Direct messages because it returns an error saying the message was not found
+- Reactions do not show up in the chat
+- Messages cannot do deleted in normal channels due to an error with message table key constraints
