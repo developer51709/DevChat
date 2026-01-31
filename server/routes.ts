@@ -324,6 +324,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/reports/app", requireAuth, async (req, res) => {
+    try {
+      const { reason } = req.body;
+      if (!reason) return res.status(400).send("Reason is required");
+      await storage.createModerationLog({
+        action: "app_report",
+        targetId: "app",
+        reason,
+        adminId: req.user!.id,
+      });
+      res.sendStatus(201);
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/messages/:id/reactions", requireAuth, async (req, res) => {
+    try {
+      const { emoji } = req.body;
+      if (!emoji) return res.status(400).send("Emoji is required");
+      
+      const message = await storage.getMessage(req.params.id);
+      if (!message) return res.status(404).send("Message not found");
+
+      let reactions: any[] = JSON.parse(message.reactions || "[]");
+      const reactionIndex = reactions.findIndex(r => r.emoji === emoji);
+
+      if (reactionIndex > -1) {
+        const reaction = reactions[reactionIndex];
+        const userIndex = reaction.userIds.indexOf(req.user!.id);
+        if (userIndex > -1) {
+          reaction.userIds.splice(userIndex, 1);
+          reaction.count--;
+          if (reaction.count === 0) {
+            reactions.splice(reactionIndex, 1);
+          }
+        } else {
+          reaction.userIds.push(req.user!.id);
+          reaction.count++;
+        }
+      } else {
+        reactions.push({ emoji, count: 1, userIds: [req.user!.id] });
+      }
+
+      const updated = await storage.updateMessageReactions(req.params.id, JSON.stringify(reactions));
+      
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: "UPDATE_MESSAGE",
+            channelId: updated.channelId,
+            message: { 
+              ...updated, 
+              user: { 
+                id: req.user!.id, 
+                username: req.user!.username,
+                displayName: req.user!.displayName,
+                role: req.user!.role
+              } 
+            }
+          }));
+        }
+      });
+
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
+  });
+
   app.patch("/api/user/password", requireAuth, async (req, res) => {
     try {
       const { currentPassword, newPassword } = updatePasswordSchema.parse(req.body);
@@ -434,6 +504,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const conversations = await storage.getRecentConversations(req.user!.id);
       res.json(conversations.map(({ password, ...user }) => user));
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.get("/api/dms/:userId", requireAuth, async (req, res) => {
+    try {
+      const messages = await storage.getDirectMessages(req.user!.id, req.params.userId);
+      res.json(messages);
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.post("/api/reports/app", requireAuth, async (req, res) => {
+    try {
+      const { reason } = req.body;
+      if (!reason) return res.status(400).send("Reason is required");
+      await storage.createModerationLog({
+        action: "app_report",
+        targetId: "app",
+        reason,
+        adminId: req.user!.id,
+      });
+      res.sendStatus(201);
     } catch (error: any) {
       res.status(500).send(error.message);
     }

@@ -139,7 +139,7 @@ export function Sidebar({
         </div>
 
         <div className="pt-4 border-t border-white/5 space-y-2">
-          <ReportsDialog />
+          {isAdmin && <ReportsDialog />}
           {isAdmin && (
             <Link href="/admin">
               <Button variant="ghost" className="w-full justify-start gap-2 text-[#949ba4] hover:text-white">

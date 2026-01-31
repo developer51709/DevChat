@@ -115,7 +115,9 @@ export function ChannelList({
                         className="h-6 w-6 text-destructive hover:text-destructive"
                         onClick={(e) => {
                           e.stopPropagation();
-                          onDeleteChannel?.(channel);
+                          if (confirm("Are you sure you want to delete this channel?")) {
+                            onDeleteChannel?.(channel);
+                          }
                         }}
                         data-testid={`button-delete-channel-${channel.id}`}
                       >

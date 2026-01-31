@@ -75,6 +75,10 @@ export default function HomePage() {
 
   const { data: dmMessages = [], isLoading: dmsLoading } = useQuery<DirectMessageWithUsers[]>({
     queryKey: ["/api/dms", activeDMUserId],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/dms/${activeDMUserId}`);
+      return await res.json();
+    },
     enabled: viewMode === "dm" && !!activeDMUserId,
   });
 

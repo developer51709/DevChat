@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, X, Check, MoreVertical, Trash, Edit2, MessageSquare, Flag, Clock, Ban, Trash2 } from "lucide-react";
+import { Loader2, X, Check, MoreVertical, Trash, Edit2, MessageSquare, Flag, Clock, Ban, Trash2, Smile } from "lucide-react";
 import { type MessageWithUser, type User } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -311,6 +311,18 @@ export function MessageList({
                               Send Direct Message
                             </DropdownMenuItem>
                             
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                const emoji = window.prompt("Enter an emoji:");
+                                if (emoji) {
+                                  // Handle reaction
+                                }
+                              }}
+                            >
+                              <Smile className="mr-2 h-4 w-4" />
+                              Add Reaction
+                            </DropdownMenuItem>
+
                             {isStaff && (
                               <>
                                 <DropdownMenuItem 

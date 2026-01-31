@@ -58,6 +58,7 @@ export interface IStorage {
   updateMessage(id: string, content: string): Promise<Message>;
   deleteMessage(id: string): Promise<void>;
   getMessage(id: string): Promise<Message | undefined>;
+  updateMessageReactions(id: string, reactions: string): Promise<Message>;
 
   // Profile methods
   updateUser(id: string, data: Partial<User>): Promise<User>;
@@ -246,6 +247,8 @@ export class DatabaseStorage implements IStorage {
       content: r.content,
       channelId: r.channelId,
       userId: r.userId,
+      attachments: null,
+      reactions: "[]",
       createdAt: r.createdAt,
       user: r.user,
     }));
@@ -271,12 +274,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateMessage(id: string, content: string): Promise<Message> {
-    const [message] = await db
+    const [updated] = await db
       .update(messages)
       .set({ content })
       .where(eq(messages.id, id))
       .returning();
-    return message;
+    return updated;
+  }
+
+  async updateMessageReactions(id: string, reactions: string): Promise<Message> {
+    const [updated] = await db
+      .update(messages)
+      .set({ reactions })
+      .where(eq(messages.id, id))
+      .returning();
+    return updated;
   }
 
   async deleteMessage(id: string): Promise<void> {

@@ -32,6 +32,8 @@ export const messages = pgTable("messages", {
   content: text("content").notNull(),
   channelId: varchar("channel_id").notNull().references(() => channels.id, { onDelete: "cascade" }),
   userId: varchar("user_id").notNull().references(() => users.id),
+  attachments: text("attachments").array(),
+  reactions: text("reactions").default(sql`'[]'::text`).notNull(), // JSON string: { emoji: string, count: number, userIds: string[] }[]
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -41,6 +43,8 @@ export const directMessages = pgTable("direct_messages", {
   content: text("content").notNull(),
   senderId: varchar("sender_id").notNull().references(() => users.id),
   receiverId: varchar("receiver_id").notNull().references(() => users.id),
+  attachments: text("attachments").array(),
+  reactions: text("reactions").default(sql`'[]'::text`).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
