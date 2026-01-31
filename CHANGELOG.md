@@ -40,6 +40,13 @@
   </ul>
 </details>
 <details>
-  <summary>January 29, 2026</summary>
-  
+  <summary>January 31, 2026</summary>
+  <ol>
+    <li><strong>Direct Message Visibility:</strong> <br>Fixed a bug where DM messages weren't appearing by adding the correct data fetching logic and updating the server route.</li>
+    <li><strong>Moderation Reports Security:</strong> <br>Restricted the visibility of the "Moderation Reports" button to Admin accounts only. Normal users no longer see this button in their side panel.</li>
+    <li><strong>Channel Deletion:</strong> <br>Added a delete button for channels (visible to admins) with a confirmation dialog to prevent accidental deletions.</li>
+    <li><strong>Emoji Reactions:</strong> <br>Implemented a real-time emoji reaction system. Users can now add and toggle reactions on messages via a new menu option.</li>
+    <li><strong>File Sharing (Foundation):</strong> <br>Updated the database schema to support attachments and added a file upload trigger to the message input.</li>
+    <li><strong>App Issue Reporting:</strong> <br>Added a new backend endpoint to handle app-related issue reports, allowing users to submit feedback directly through the platform.</li>
+  </ol>
 </details>
