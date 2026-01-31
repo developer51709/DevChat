@@ -37,6 +37,7 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
   const user = await storage.getUserByToken(token);
   if (user) {
     if (user.isBanned) {
+      console.log(`User ${user.username} is banned, rejecting request`);
       return res.status(403).json({ error: "Your account has been permanently banned" });
     }
     if (user.timeoutUntil && new Date(user.timeoutUntil) > new Date()) {
