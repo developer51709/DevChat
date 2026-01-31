@@ -1,0 +1,17 @@
+{
+    "port": 5000,
+    "name": "DevChat",
+    "description": "A chat server for developers.",
+    "max_users": 100,
+    "server_version": "1.0.0",
+    "features": {
+        "private_messages": true,
+        "ban_appeals": true,
+        "message_editing": true,
+        "message_deletion": true,
+        "message_reactions": not_implemented_yet,
+        "voice_calls": not_implemented_yet,
+        "video_calls": not_implemented_yet,
+        "file_uploads": not_implemented_yet
+    }
+}
