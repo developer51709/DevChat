@@ -175,8 +175,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { content } = req.body;
       if (!content) return res.status(400).send("Content is required");
       
-      const message = await storage.getMessage(req.params.id);
-      if (!message) return res.status(404).send("Message not found");
+      let message = await storage.getMessage(req.params.id);
+      if (!message) {
+        // Check direct messages
+        const dm = await storage.getDirectMessage(req.params.id);
+        if (dm) {
+          if (dm.senderId !== req.user!.id) return res.status(403).send("Unauthorized");
+          const updated = await storage.updateDirectMessage(req.params.id, content);
+          
+          wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(JSON.stringify({
+                type: "UPDATE_DM",
+                dm: updated
+              }));
+            }
+          });
+          return res.json(updated);
+        }
+        return res.status(404).send("Message not found");
+      }
+      
       if (message.userId !== req.user!.id) return res.status(403).send("Unauthorized");
 
       const updated = await storage.updateMessage(req.params.id, content);
@@ -207,8 +226,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/messages/:id", requireAuth, async (req, res) => {
     try {
-      const message = await storage.getMessage(req.params.id);
-      if (!message) return res.status(404).send("Message not found");
+      let message = await storage.getMessage(req.params.id);
+      if (!message) {
+        // Check direct messages
+        const dm = await storage.getDirectMessage(req.params.id);
+        if (dm) {
+          if (dm.senderId !== req.user!.id) return res.status(403).send("Unauthorized");
+          await storage.deleteDirectMessage(req.params.id);
+          
+          wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+              client.send(JSON.stringify({
+                type: "DELETE_DM",
+                messageId: req.params.id,
+                senderId: dm.senderId,
+                receiverId: dm.receiverId
+              }));
+            }
+          });
+          return res.sendStatus(200);
+        }
+        return res.status(404).send("Message not found");
+      }
+      
       if (message.userId !== req.user!.id) return res.status(403).send("Unauthorized");
 
       await storage.deleteMessage(req.params.id);
@@ -345,7 +385,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { emoji } = req.body;
       if (!emoji) return res.status(400).send("Emoji is required");
       
-      const message = await storage.getMessage(req.params.id);
+      let message = await storage.getMessage(req.params.id);
+      let isDM = false;
+      if (!message) {
+        message = await storage.getDirectMessage(req.params.id) as any;
+        isDM = true;
+      }
+      
       if (!message) return res.status(404).send("Message not found");
 
       let reactions: any[] = JSON.parse(message.reactions || "[]");
@@ -368,23 +414,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reactions.push({ emoji, count: 1, userIds: [req.user!.id] });
       }
 
-      const updated = await storage.updateMessageReactions(req.params.id, JSON.stringify(reactions));
+      const updated = isDM 
+        ? await storage.updateDirectMessageReactions(req.params.id, JSON.stringify(reactions)) as any
+        : await storage.updateMessageReactions(req.params.id, JSON.stringify(reactions));
       
       wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify({
-            type: "UPDATE_MESSAGE",
-            channelId: updated.channelId,
-            message: { 
-              ...updated, 
-              user: { 
-                id: req.user!.id, 
-                username: req.user!.username,
-                displayName: req.user!.displayName,
-                role: req.user!.role
-              } 
-            }
-          }));
+          if (isDM) {
+            client.send(JSON.stringify({
+              type: "UPDATE_DM",
+              dm: updated
+            }));
+          } else {
+            client.send(JSON.stringify({
+              type: "UPDATE_MESSAGE",
+              channelId: updated.channelId,
+              message: { 
+                ...updated, 
+                user: { 
+                  id: req.user!.id, 
+                  username: req.user!.username,
+                  displayName: req.user!.displayName,
+                  role: req.user!.role
+                } 
+              }
+            }));
+          }
         }
       });
 

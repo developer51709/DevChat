@@ -252,12 +252,42 @@ export function MessageList({
                     </div>
                   </div>
                 ) : (
-                  <p
-                    className="text-base text-foreground break-words"
-                    data-testid={`message-content-${message.id}`}
-                  >
-                    {message.content}
-                  </p>
+                  <>
+                    <p
+                      className="text-base text-foreground break-words"
+                      data-testid={`message-content-${message.id}`}
+                    >
+                      {message.content}
+                    </p>
+                    {message.reactions && JSON.parse(message.reactions).length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {JSON.parse(message.reactions).map((reaction: any) => (
+                          <button
+                            key={reaction.emoji}
+                            onClick={async () => {
+                              try {
+                                await apiRequest("POST", `/api/messages/${message.id}/reactions`, { emoji: reaction.emoji });
+                                queryClient.invalidateQueries({ queryKey: ["/api/channels"] });
+                                queryClient.invalidateQueries({ queryKey: ["/api/dms"] });
+                              } catch (error: any) {
+                                toast({ title: "Reaction failed", description: error.message, variant: "destructive" });
+                              }
+                            }}
+                            className={`
+                              inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition-colors
+                              ${reaction.userIds.includes(currentUserId)
+                                ? "bg-primary/20 border-primary text-primary"
+                                : "bg-muted border-transparent text-muted-foreground hover:border-border"
+                              }
+                            `}
+                          >
+                            <span>{reaction.emoji}</span>
+                            <span className="font-semibold">{reaction.count}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -312,10 +342,16 @@ export function MessageList({
                             </DropdownMenuItem>
                             
                             <DropdownMenuItem 
-                              onClick={() => {
+                              onClick={async () => {
                                 const emoji = window.prompt("Enter an emoji:");
                                 if (emoji) {
-                                  // Handle reaction
+                                  try {
+                                    await apiRequest("POST", `/api/messages/${message.id}/reactions`, { emoji });
+                                    queryClient.invalidateQueries({ queryKey: ["/api/channels"] });
+                                    queryClient.invalidateQueries({ queryKey: ["/api/dms"] });
+                                  } catch (error: any) {
+                                    toast({ title: "Reaction failed", description: error.message, variant: "destructive" });
+                                  }
                                 }
                               }}
                             >

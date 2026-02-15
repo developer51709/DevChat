@@ -66,7 +66,11 @@ export interface IStorage {
 
   // Direct Message methods
   getDirectMessages(userId1: string, userId2: string): Promise<DirectMessageWithUsers[]>;
+  getDirectMessage(id: string): Promise<DirectMessage | undefined>;
   createDirectMessage(dm: InsertDirectMessage, senderId: string): Promise<DirectMessage>;
+  updateDirectMessage(id: string, content: string): Promise<DirectMessage>;
+  deleteDirectMessage(id: string): Promise<void>;
+  updateDirectMessageReactions(id: string, reactions: string): Promise<DirectMessage>;
   getRecentConversations(userId: string): Promise<User[]>;
 
   // Report methods
@@ -378,7 +382,35 @@ export class DatabaseStorage implements IStorage {
       .values({
         ...insertDm,
         senderId,
+        reactions: "[]",
       })
+      .returning();
+    return dm;
+  }
+
+  async getDirectMessage(id: string): Promise<DirectMessage | undefined> {
+    const [dm] = await db.select().from(directMessages).where(eq(directMessages.id, id));
+    return dm || undefined;
+  }
+
+  async updateDirectMessage(id: string, content: string): Promise<DirectMessage> {
+    const [dm] = await db
+      .update(directMessages)
+      .set({ content })
+      .where(eq(directMessages.id, id))
+      .returning();
+    return dm;
+  }
+
+  async deleteDirectMessage(id: string): Promise<void> {
+    await db.delete(directMessages).where(eq(directMessages.id, id));
+  }
+
+  async updateDirectMessageReactions(id: string, reactions: string): Promise<DirectMessage> {
+    const [dm] = await db
+      .update(directMessages)
+      .set({ reactions })
+      .where(eq(directMessages.id, id))
       .returning();
     return dm;
   }
