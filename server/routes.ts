@@ -33,6 +33,8 @@ import {
   insertReportSchema,
   updateProfileSchema,
   updatePasswordSchema,
+  insertBotApplicationSchema,
+  insertBotTokenSchema,
   type MessageWithUser,
 } from "@shared/schema";
 
@@ -672,6 +674,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.sendStatus(200);
     } catch (error: any) {
       res.status(500).send(error.message);
+    }
+  });
+
+  // ─── Developer Portal Routes ─────────────────────────────────────────
+
+  // List user's bot applications
+  app.get("/api/developer/apps", requireAuth, async (req, res) => {
+    try {
+      const apps = await storage.getBotApplicationsByOwner(req.user!.id);
+      res.json(apps);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create a new bot application
+  app.post("/api/developer/apps", requireAuth, async (req, res) => {
+    try {
+      const parsed = insertBotApplicationSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: parsed.error.errors });
+      const app2 = await storage.createBotApplication(parsed.data, req.user!.id);
+      res.status(201).json(app2);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get a specific bot application (owner only)
+  app.get("/api/developer/apps/:id", requireAuth, async (req, res) => {
+    try {
+      const app2 = await storage.getBotApplication(req.params.id);
+      if (!app2) return res.status(404).json({ error: "App not found" });
+      if (app2.ownerId !== req.user!.id && req.user!.role !== "admin") {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      res.json(app2);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update a bot application
+  app.patch("/api/developer/apps/:id", requireAuth, async (req, res) => {
+    try {
+      const app2 = await storage.getBotApplication(req.params.id);
+      if (!app2) return res.status(404).json({ error: "App not found" });
+      if (app2.ownerId !== req.user!.id) return res.status(403).json({ error: "Forbidden" });
+      const updated = await storage.updateBotApplication(req.params.id, req.body);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete a bot application
+  app.delete("/api/developer/apps/:id", requireAuth, async (req, res) => {
+    try {
+      const app2 = await storage.getBotApplication(req.params.id);
+      if (!app2) return res.status(404).json({ error: "App not found" });
+      if (app2.ownerId !== req.user!.id) return res.status(403).json({ error: "Forbidden" });
+      await storage.deleteBotApplication(req.params.id);
+      res.sendStatus(204);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // List tokens for a bot app
+  app.get("/api/developer/apps/:id/tokens", requireAuth, async (req, res) => {
+    try {
+      const app2 = await storage.getBotApplication(req.params.id);
+      if (!app2) return res.status(404).json({ error: "App not found" });
+      if (app2.ownerId !== req.user!.id) return res.status(403).json({ error: "Forbidden" });
+      const tokens = await storage.getBotTokens(req.params.id);
+      res.json(tokens);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create a new token for a bot app
+  app.post("/api/developer/apps/:id/tokens", requireAuth, async (req, res) => {
+    try {
+      const app2 = await storage.getBotApplication(req.params.id);
+      if (!app2) return res.status(404).json({ error: "App not found" });
+      if (app2.ownerId !== req.user!.id) return res.status(403).json({ error: "Forbidden" });
+      const { name } = req.body;
+      if (!name || typeof name !== "string") return res.status(400).json({ error: "Token name required" });
+      const token = await storage.createBotToken(req.params.id, name);
+      res.status(201).json(token);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Revoke a bot token
+  app.delete("/api/developer/apps/:id/tokens/:tokenId", requireAuth, async (req, res) => {
+    try {
+      const app2 = await storage.getBotApplication(req.params.id);
+      if (!app2) return res.status(404).json({ error: "App not found" });
+      if (app2.ownerId !== req.user!.id) return res.status(403).json({ error: "Forbidden" });
+      await storage.deleteBotToken(req.params.tokenId);
+      res.sendStatus(204);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 

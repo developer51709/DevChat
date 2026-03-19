@@ -5,6 +5,8 @@ import {
   moderationLogs,
   directMessages,
   reports,
+  botApplications,
+  botTokens,
   type User,
   type InsertUser,
   type Channel,
@@ -22,6 +24,10 @@ import {
   type Report,
   type InsertReport,
   type ReportWithDetails,
+  type BotApplication,
+  type InsertBotApplication,
+  type BotToken,
+  type InsertBotToken,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, or, and } from "drizzle-orm";
@@ -83,6 +89,19 @@ export interface IStorage {
   timeoutUser(id: string, until: Date, adminId: string, reason?: string): Promise<void>;
   getModerationLogs(): Promise<ModerationLogWithUser[]>;
   createModerationLog(log: InsertModerationLog): Promise<ModerationLog>;
+
+  // Bot Application methods
+  getBotApplicationsByOwner(ownerId: string): Promise<BotApplication[]>;
+  getBotApplication(id: string): Promise<BotApplication | undefined>;
+  createBotApplication(data: InsertBotApplication, ownerId: string): Promise<BotApplication>;
+  updateBotApplication(id: string, data: Partial<InsertBotApplication>): Promise<BotApplication>;
+  deleteBotApplication(id: string): Promise<void>;
+
+  // Bot Token methods
+  getBotTokens(botId: string): Promise<BotToken[]>;
+  createBotToken(botId: string, name: string): Promise<BotToken>;
+  deleteBotToken(id: string): Promise<void>;
+  getBotByToken(token: string): Promise<BotApplication | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -530,6 +549,50 @@ export class DatabaseStorage implements IStorage {
       reason: reason || `Timeout until ${until.toISOString()}`,
       adminId,
     });
+  }
+
+  async getBotApplicationsByOwner(ownerId: string): Promise<BotApplication[]> {
+    return db.select().from(botApplications).where(eq(botApplications.ownerId, ownerId)).orderBy(desc(botApplications.createdAt));
+  }
+
+  async getBotApplication(id: string): Promise<BotApplication | undefined> {
+    const [app] = await db.select().from(botApplications).where(eq(botApplications.id, id));
+    return app || undefined;
+  }
+
+  async createBotApplication(data: InsertBotApplication, ownerId: string): Promise<BotApplication> {
+    const [app] = await db.insert(botApplications).values({ ...data, ownerId }).returning();
+    return app;
+  }
+
+  async updateBotApplication(id: string, data: Partial<InsertBotApplication>): Promise<BotApplication> {
+    const [app] = await db.update(botApplications).set(data).where(eq(botApplications.id, id)).returning();
+    return app;
+  }
+
+  async deleteBotApplication(id: string): Promise<void> {
+    await db.delete(botApplications).where(eq(botApplications.id, id));
+  }
+
+  async getBotTokens(botId: string): Promise<BotToken[]> {
+    return db.select().from(botTokens).where(eq(botTokens.botId, botId)).orderBy(desc(botTokens.createdAt));
+  }
+
+  async createBotToken(botId: string, name: string): Promise<BotToken> {
+    const token = `bot_${randomBytes(32).toString("hex")}`;
+    const [t] = await db.insert(botTokens).values({ botId, name, token }).returning();
+    return t;
+  }
+
+  async deleteBotToken(id: string): Promise<void> {
+    await db.delete(botTokens).where(eq(botTokens.id, id));
+  }
+
+  async getBotByToken(token: string): Promise<BotApplication | undefined> {
+    const [tokenRow] = await db.select().from(botTokens).where(eq(botTokens.token, token));
+    if (!tokenRow) return undefined;
+    await db.update(botTokens).set({ lastUsedAt: new Date() }).where(eq(botTokens.id, tokenRow.id));
+    return this.getBotApplication(tokenRow.botId);
   }
 }
 

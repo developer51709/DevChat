@@ -49,6 +49,29 @@ export const directMessages = pgTable("direct_messages", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Bot Applications table
+export const botApplications = pgTable("bot_applications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  ownerId: varchar("owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  clientId: varchar("client_id").notNull().default(sql`gen_random_uuid()`),
+  avatarUrl: text("avatar_url"),
+  permissions: text("permissions").default("[]").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Bot Tokens table
+export const botTokens = pgTable("bot_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  botId: varchar("bot_id").notNull().references(() => botApplications.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  token: text("token").notNull(),
+  lastUsedAt: timestamp("last_used_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Reports table
 export const reports = pgTable("reports", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -142,6 +165,21 @@ export const insertReportSchema = createInsertSchema(reports).omit({
 
 export const insertModerationLogSchema = createInsertSchema(moderationLogs);
 
+export const insertBotApplicationSchema = createInsertSchema(botApplications).omit({
+  id: true,
+  ownerId: true,
+  clientId: true,
+  createdAt: true,
+});
+
+export const insertBotTokenSchema = createInsertSchema(botTokens).omit({
+  id: true,
+  botId: true,
+  token: true,
+  lastUsedAt: true,
+  createdAt: true,
+});
+
 export const updateProfileSchema = z.object({
   username: z.string().min(3).optional(),
   displayName: z.string().min(1).optional(),
@@ -167,6 +205,10 @@ export type Report = typeof reports.$inferSelect;
 export type InsertReport = z.infer<typeof insertReportSchema>;
 export type ModerationLog = typeof moderationLogs.$inferSelect;
 export type InsertModerationLog = z.infer<typeof insertModerationLogSchema>;
+export type BotApplication = typeof botApplications.$inferSelect;
+export type InsertBotApplication = z.infer<typeof insertBotApplicationSchema>;
+export type BotToken = typeof botTokens.$inferSelect;
+export type InsertBotToken = z.infer<typeof insertBotTokenSchema>;
 
 export type MessageWithUser = Message & {
   user: Pick<User, "id" | "username" | "displayName" | "role" | "avatarUrl">;
