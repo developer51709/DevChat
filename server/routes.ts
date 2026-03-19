@@ -573,22 +573,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/reports/app", requireAuth, async (req, res) => {
-    try {
-      const { reason } = req.body;
-      if (!reason) return res.status(400).send("Reason is required");
-      await storage.createModerationLog({
-        action: "app_report",
-        targetId: "app",
-        reason,
-        adminId: req.user!.id,
-      });
-      res.sendStatus(201);
-    } catch (error: any) {
-      res.status(500).send(error.message);
-    }
-  });
-
   app.get("/api/admin/reports", requireAdmin, async (req, res) => {
     try {
       const reports = await storage.getReports();

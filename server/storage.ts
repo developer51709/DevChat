@@ -233,6 +233,8 @@ export class DatabaseStorage implements IStorage {
         content: messages.content,
         channelId: messages.channelId,
         userId: messages.userId,
+        attachments: messages.attachments,
+        reactions: messages.reactions,
         createdAt: messages.createdAt,
         user: {
           id: users.id,
@@ -251,8 +253,8 @@ export class DatabaseStorage implements IStorage {
       content: r.content,
       channelId: r.channelId,
       userId: r.userId,
-      attachments: null,
-      reactions: "[]",
+      attachments: r.attachments,
+      reactions: r.reactions ?? "[]",
       createdAt: r.createdAt,
       user: r.user,
     }));
@@ -346,6 +348,8 @@ export class DatabaseStorage implements IStorage {
         content: directMessages.content,
         senderId: directMessages.senderId,
         receiverId: directMessages.receiverId,
+        attachments: directMessages.attachments,
+        reactions: directMessages.reactions,
         createdAt: directMessages.createdAt,
         sender: {
           id: users.id,

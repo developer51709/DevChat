@@ -53,7 +53,7 @@ export const reports = pgTable("reports", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   reporterId: varchar("reporter_id").notNull().references(() => users.id),
   targetUserId: varchar("target_user_id").references(() => users.id),
-  targetMessageId: varchar("target_message_id").references(() => messages.id),
+  targetMessageId: varchar("target_message_id").references(() => messages.id, { onDelete: "set null" }),
   reason: text("reason").notNull(),
   status: text("status").notNull().default("pending"), // 'pending', 'resolved', 'dismissed'
   createdAt: timestamp("created_at").defaultNow().notNull(),
