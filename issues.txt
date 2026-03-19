@@ -1,3 +1,1 @@
-- Messages cannot be edited or deleted in Direct messages because it returns an error saying the message was not found
-- Reactions do not show up in the chat
-- Messages cannot do deleted in normal channels due to an error with message table key constraints
+- The delete channel button is missing
