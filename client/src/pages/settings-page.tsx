@@ -9,14 +9,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
-import { ChevronLeft, Trash2, Shield } from "lucide-react";
+import { ChevronLeft, Trash2, Shield, Camera, Loader2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useRef } from "react";
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user } = useAuth() as { user: any | null };
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const isAdmin = user?.role === "admin";
 
@@ -51,6 +54,29 @@ export default function SettingsPage() {
     },
   });
 
+  const avatarMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("avatar", file);
+      const res = await fetch("/api/user/avatar", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+        headers: { Authorization: `Bearer ${localStorage.getItem("auth_token") || ""}` },
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    onSuccess: (updatedUser) => {
+      queryClient.setQueryData(["/api/user"], updatedUser);
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      toast({ title: "Profile picture updated" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
+    },
+  });
+
   const passwordMutation = useMutation({
     mutationFn: async (data: any) => {
       await apiRequest("PATCH", "/api/user/password", data);
@@ -75,6 +101,12 @@ export default function SettingsPage() {
     },
   });
 
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) avatarMutation.mutate(file);
+    e.target.value = "";
+  };
+
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-2xl mx-auto space-y-8">
@@ -89,7 +121,7 @@ export default function SettingsPage() {
 
         {isAdmin && (
           <Card className="border-primary/50 bg-primary/5">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
               <div className="space-y-1">
                 <CardTitle className="text-xl">Admin Controls</CardTitle>
                 <CardDescription>Administrative tools and management</CardDescription>
@@ -105,6 +137,54 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Profile Picture</CardTitle>
+            <CardDescription>Upload a photo to personalize your profile</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-6">
+              <div className="relative">
+                <Avatar className="h-20 w-20">
+                  <AvatarImage src={user?.avatarUrl || ""} alt={user?.username} />
+                  <AvatarFallback className="bg-primary/20 text-primary text-xl font-semibold">
+                    {(user?.displayName || user?.username || "?").slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <button
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={avatarMutation.isPending}
+                  className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
+                >
+                  {avatarMutation.isPending
+                    ? <Loader2 className="h-5 w-5 text-white animate-spin" />
+                    : <Camera className="h-5 w-5 text-white" />
+                  }
+                </button>
+              </div>
+              <div className="space-y-2">
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={avatarMutation.isPending}
+                  className="gap-2"
+                >
+                  {avatarMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                  {avatarMutation.isPending ? "Uploading..." : "Change Photo"}
+                </Button>
+                <p className="text-xs text-muted-foreground">JPG, PNG, GIF or WebP. Max 10MB.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

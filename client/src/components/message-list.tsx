@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, X, Check, MoreVertical, Trash, Edit2, MessageSquare, Flag, Clock, Ban, Trash2, Smile } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Loader2, X, Check, MoreVertical, Trash, Edit2, MessageSquare, Flag, Clock, Ban, Trash2, Smile, FileText, Download, Image as ImageIcon } from "lucide-react";
 import { type MessageWithUser, type User } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,38 @@ interface MessageListProps {
   onTimeout?: (userId: string) => void;
   onBan?: (userId: string) => void;
   isAdmin?: boolean;
+}
+
+function isImageUrl(url: string) {
+  return /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
+}
+
+function AttachmentDisplay({ url, name }: { url: string; name?: string }) {
+  const filename = name || url.split("/").pop() || "file";
+  if (isImageUrl(url)) {
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer" className="block mt-2">
+        <img
+          src={url}
+          alt={filename}
+          className="max-w-xs max-h-64 rounded-md object-cover border border-border hover:opacity-90 transition-opacity"
+        />
+      </a>
+    );
+  }
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-2 mt-2 px-3 py-2 rounded-md bg-muted border border-border text-sm text-foreground hover:bg-muted/80 transition-colors"
+      download
+    >
+      <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+      <span className="truncate max-w-[200px]">{filename}</span>
+      <Download className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+    </a>
+  );
 }
 
 export function MessageList({
@@ -167,6 +199,9 @@ export function MessageList({
             index === 0 || messages[index - 1].userId !== message.userId;
           const isCurrentUser = message.userId === currentUserId;
           const isEditing = editingId === message.id;
+          const attachments: string[] = message.attachments || [];
+          let reactions: any[] = [];
+          try { reactions = JSON.parse(message.reactions || "[]"); } catch {}
 
           return (
             <div
@@ -180,6 +215,7 @@ export function MessageList({
                 {showAvatar ? (
                   <Link href={`/profile/${message.userId}`}>
                     <Avatar className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity">
+                      <AvatarImage src={(message.user as any).avatarUrl || ""} alt={message.user.username} />
                       <AvatarFallback className="bg-primary/20 text-primary font-semibold">
                         {(message.user.displayName || message.user.username).slice(0, 2).toUpperCase()}
                       </AvatarFallback>
@@ -192,7 +228,7 @@ export function MessageList({
 
               <div className="flex-1 min-w-0">
                 {showAvatar && (
-                  <div className="flex items-baseline gap-2 mb-1">
+                  <div className="flex items-baseline gap-2 mb-1 flex-wrap">
                     <Link href={`/profile/${message.userId}`}>
                       <span
                         className={`font-semibold text-sm cursor-pointer hover:underline ${
@@ -225,7 +261,7 @@ export function MessageList({
                     </span>
                   </div>
                 )}
-                
+
                 {isEditing ? (
                   <div className="flex flex-col gap-2 mt-1">
                     <textarea
@@ -259,9 +295,18 @@ export function MessageList({
                     >
                       {message.content}
                     </p>
-                    {message.reactions && JSON.parse(message.reactions).length > 0 && (
+
+                    {attachments.length > 0 && (
+                      <div className="flex flex-col gap-1">
+                        {attachments.map((url, i) => (
+                          <AttachmentDisplay key={i} url={url} />
+                        ))}
+                      </div>
+                    )}
+
+                    {reactions.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
-                        {JSON.parse(message.reactions).map((reaction: any) => (
+                        {reactions.map((reaction: any) => (
                           <button
                             key={reaction.emoji}
                             onClick={async () => {
@@ -293,113 +338,109 @@ export function MessageList({
 
               {!isEditing && (
                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {!isEditing && (
-                    <>
-                      {isCurrentUser ? (
-                        <div className="flex items-center">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                            onClick={() => {
-                              setEditingId(message.id);
-                              setEditContent(message.content);
-                            }}
-                            data-testid={`button-edit-message-${message.id}`}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                            onClick={() => deleteMutation.mutate(message.id)}
-                            data-testid={`button-delete-message-${message.id}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem 
-                              onClick={() => {
-                                setReportMessageId(message.id);
-                                setIsReportDialogOpen(true);
-                              }}
+                  {isCurrentUser ? (
+                    <div className="flex items-center">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                          setEditingId(message.id);
+                          setEditContent(message.content);
+                        }}
+                        data-testid={`button-edit-message-${message.id}`}
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() => deleteMutation.mutate(message.id)}
+                        data-testid={`button-delete-message-${message.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setReportMessageId(message.id);
+                            setIsReportDialogOpen(true);
+                          }}
+                        >
+                          <Flag className="mr-2 h-4 w-4" />
+                          Report Message
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onStartDM?.(message.user.id)}>
+                          <MessageSquare className="mr-2 h-4 w-4" />
+                          Send Direct Message
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                          onClick={async () => {
+                            const emoji = window.prompt("Enter an emoji:");
+                            if (emoji) {
+                              try {
+                                await apiRequest("POST", `/api/messages/${message.id}/reactions`, { emoji });
+                                queryClient.invalidateQueries({ queryKey: ["/api/channels"] });
+                                queryClient.invalidateQueries({ queryKey: ["/api/dms"] });
+                              } catch (error: any) {
+                                toast({ title: "Reaction failed", description: error.message, variant: "destructive" });
+                              }
+                            }
+                          }}
+                        >
+                          <Smile className="mr-2 h-4 w-4" />
+                          Add Reaction
+                        </DropdownMenuItem>
+
+                        {isStaff && (
+                          <>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => deleteModMutation.mutate(message.id)}
                             >
-                              <Flag className="mr-2 h-4 w-4" />
-                              Report Message
+                              <Trash className="mr-2 h-4 w-4" />
+                              Remove Message
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onStartDM?.(message.user.id)}>
-                              <MessageSquare className="mr-2 h-4 w-4" />
-                              Send Direct Message
-                            </DropdownMenuItem>
-                            
-                            <DropdownMenuItem 
-                              onClick={async () => {
-                                const emoji = window.prompt("Enter an emoji:");
-                                if (emoji) {
-                                  try {
-                                    await apiRequest("POST", `/api/messages/${message.id}/reactions`, { emoji });
-                                    queryClient.invalidateQueries({ queryKey: ["/api/channels"] });
-                                    queryClient.invalidateQueries({ queryKey: ["/api/dms"] });
-                                  } catch (error: any) {
-                                    toast({ title: "Reaction failed", description: error.message, variant: "destructive" });
-                                  }
+                            <DropdownMenuItem
+                              onClick={() => {
+                                const reason = window.prompt("Reason for timeout?");
+                                if (reason) {
+                                  const until = new Date(Date.now() + 3600000).toISOString();
+                                  timeoutMutation.mutate({ userId: message.userId, until, reason });
                                 }
                               }}
                             >
-                              <Smile className="mr-2 h-4 w-4" />
-                              Add Reaction
+                              <Clock className="mr-2 h-4 w-4" />
+                              Timeout User (1h)
                             </DropdownMenuItem>
-
-                            {isStaff && (
-                              <>
-                                <DropdownMenuItem 
-                                  className="text-destructive"
-                                  onClick={() => deleteModMutation.mutate(message.id)}
-                                >
-                                  <Trash className="mr-2 h-4 w-4" />
-                                  Remove Message
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                  onClick={() => {
-                                    const reason = window.prompt("Reason for timeout?");
-                                    if (reason) {
-                                      const until = new Date(Date.now() + 3600000).toISOString(); // 1 hour
-                                      timeoutMutation.mutate({ userId: message.userId, until, reason });
-                                    }
-                                  }}
-                                >
-                                  <Clock className="mr-2 h-4 w-4" />
-                                  Timeout User (1h)
-                                </DropdownMenuItem>
-                                {currentUser?.role === "admin" && (
-                                  <DropdownMenuItem 
-                                    className="text-destructive"
-                                    onClick={() => {
-                                      const reason = window.prompt("Reason for ban?");
-                                      if (reason) {
-                                        banMutation.mutate({ userId: message.userId, reason });
-                                      }
-                                    }}
-                                  >
-                                    <Ban className="mr-2 h-4 w-4" />
-                                    Ban User
-                                  </DropdownMenuItem>
-                                )}
-                              </>
+                            {currentUser?.role === "admin" && (
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => {
+                                  const reason = window.prompt("Reason for ban?");
+                                  if (reason) {
+                                    banMutation.mutate({ userId: message.userId, reason });
+                                  }
+                                }}
+                              >
+                                <Ban className="mr-2 h-4 w-4" />
+                                Ban User
+                              </DropdownMenuItem>
                             )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
-                    </>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   )}
                 </div>
               )}
@@ -422,7 +463,7 @@ export function MessageList({
             />
             <div className="flex justify-end gap-3">
               <Button variant="ghost" onClick={() => setIsReportDialogOpen(false)}>Cancel</Button>
-              <Button 
+              <Button
                 onClick={() => reportMutation.mutate({ targetMessageId: reportMessageId!, reason: reportReason })}
                 disabled={!reportReason || reportMutation.isPending}
               >

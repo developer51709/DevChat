@@ -2,13 +2,13 @@
 
 A real-time messaging board for Discord development teams.
 
-## Recent Changes (Jan 31, 2026)
-- Migrated to PostgreSQL for robust data management.
-- Implemented full moderation suite: bans, timeouts, message removal, and audit logs.
-- Added real-time profile sync via WebSockets.
-- Fixed DM reliability and conversation list visibility.
-- Enabled moderation reporting for all users.
-- Added unban and untimeout functionality in the admin dashboard.
+## Recent Changes (March 19, 2026)
+- Added profile picture support: upload via Settings, shown everywhere (avatars, messages, profile page)
+- Added real file attachment sending: images previewed inline, other files as download links
+- Fixed emoji reactions not showing in chat (storage was returning hardcoded empty reactions)
+- Fixed channel message deletion FK constraint (reports.targetMessageId now uses onDelete: set null)
+- Fixed DM edit/delete/reactions with unified server routes + WebSocket events for UPDATE_DM/DELETE_DM
+- Removed duplicate /api/reports/app route
 
 ## Tech Stack
 
@@ -22,66 +22,84 @@ A real-time messaging board for Discord development teams.
 ### Backend
 - Express.js
 - PostgreSQL with Drizzle ORM
-- Passport.js for authentication
+- Token-based authentication (Bearer tokens stored in localStorage)
 - WebSocket server on /ws path
-- Session-based authentication
+- Multer for file uploads (stored in /uploads directory, served statically)
 
 ## Database Schema
 
 ### Tables
-- **users**: id (varchar UUID), username (unique), password (hashed), createdAt
-- **channels**: id (varchar UUID), name, description, createdBy (user ref), createdAt
-- **messages**: id (varchar UUID), content, channelId (channel ref), userId (user ref), createdAt
+- **users**: id, username (unique), displayName, password (hashed), role, bio, avatarUrl, isBanned, timeoutUntil, createdAt
+- **channels**: id, name, description, createdBy (user ref), createdAt
+- **messages**: id, content, channelId (cascade delete), userId (user ref), attachments (text[]), reactions (JSON string), createdAt
+- **direct_messages**: id, content, senderId, receiverId, attachments (text[]), reactions (JSON string), createdAt
+- **reports**: id, reporterId, targetUserId, targetMessageId (set null on delete), reason, status, createdAt
+- **moderation_logs**: id, action, targetId, reason, adminId, createdAt
 
 ## API Routes
 
 ### Authentication
-- POST /api/register - Register new user (username, password)
-- POST /api/login - Login user (username, password)
+- POST /api/register - Register new user
+- POST /api/login - Login user
 - POST /api/logout - Logout current user
-- GET /api/user - Get current authenticated user (returns 401 if not logged in)
+- GET /api/user - Get current authenticated user
 
 ### Channels
-- GET /api/channels - Get all channels (requires auth)
-- GET /api/channels/:id - Get specific channel (requires auth)
-- POST /api/channels - Create new channel (requires auth, body: { name, description? })
+- GET /api/channels - Get all channels
+- GET /api/channels/:id - Get specific channel
+- POST /api/channels - Create channel (admin only)
+- PATCH /api/channels/:id - Update channel (admin only)
+- DELETE /api/channels/:id - Delete channel (admin only)
 
 ### Messages
-- GET /api/channels/:channelId/messages - Get all messages for a channel (requires auth)
-- POST /api/messages - Send message (requires auth, body: { content, channelId })
+- GET /api/channels/:channelId/messages - Get channel messages
+- POST /api/messages - Send channel message (supports attachments array)
+- PATCH /api/messages/:id - Edit message (works for both channel messages and DMs)
+- DELETE /api/messages/:id - Delete message (works for both channel messages and DMs)
+- POST /api/messages/:id/reactions - Toggle emoji reaction (works for both)
 
-## WebSocket
+### Direct Messages
+- POST /api/dms - Send DM (supports attachments array)
+- GET /api/dms/:userId - Get DM conversation
+- GET /api/dms/conversations - Get recent conversation list
 
-- Connected on path: /ws
-- Real-time message updates broadcast to all connected clients
-- Message format: { type: "NEW_MESSAGE", channelId, message }
+### File Uploads
+- POST /api/upload - Upload file attachment (multipart/form-data, field: "file")
+- POST /api/user/avatar - Upload profile picture (multipart/form-data, field: "avatar")
 
-## Application Flow
+### Profile & Settings
+- PATCH /api/user/profile - Update profile (username, displayName, bio, avatarUrl)
+- PATCH /api/user/password - Change password
+- DELETE /api/user - Delete account
 
-1. **Authentication**: Users must register/login to access the app
-2. **Channel Management**: Users can create channels with names and descriptions
-3. **Messaging**: Users can send messages in any channel
-4. **Real-time Updates**: Messages appear instantly via WebSocket for all users
+### Moderation (Admin/Moderator)
+- GET /api/admin/users - List all users
+- PATCH /api/admin/users/:id/role - Change user role
+- DELETE /api/admin/users/:id - Delete user
+- POST /api/admin/users/:id/ban - Ban user
+- POST /api/admin/users/:id/unban - Unban user
+- POST /api/admin/users/:id/timeout - Timeout user
+- POST /api/admin/users/:id/untimeout - Remove timeout
+- GET /api/admin/logs - Get moderation logs
+- GET /api/admin/reports - Get user reports
+- PATCH /api/admin/reports/:id - Update report status
+- DELETE /api/moderation/messages/:id - Moderator delete message
+- POST /api/reports - Submit a user/message report
+- POST /api/reports/app - Submit an app issue report
 
-## UI Structure
+## WebSocket Events
+- NEW_MESSAGE / UPDATE_MESSAGE / DELETE_MESSAGE - Channel message events (invalidate channel messages cache)
+- NEW_DM / UPDATE_DM / DELETE_DM - Direct message events (invalidate DM cache)
+- USER_UPDATE - Profile/avatar changes (invalidate user cache)
 
-- **Auth Page** (/auth): Login and registration forms with hero section
-- **Home Page** (/): Three-column layout
-  - Left: Channel list with create button and user profile at bottom
-  - Center: Message area with channel header and message input
-  - Messages show user avatar, username, timestamp, and content
-  
+## File Storage
+- Files stored in /uploads directory at project root
+- Served statically at /uploads/* path
+- 10MB size limit per file
+- Allowed types: images (jpg/png/gif/webp), pdf, txt, doc, docx, zip, mp4, mp3
+
 ## Running the App
-
 - Server runs on port 5000
 - Frontend served via Vite
-- Database: PostgreSQL (Neon)
+- Database: PostgreSQL
 - Environment variables: DATABASE_URL, SESSION_SECRET
-
-## Key Features
-
-- Dark mode by default (Discord-inspired theme)
-- Real-time message updates
-- Session-based authentication with secure password hashing
-- Message history persistence
-- Responsive design

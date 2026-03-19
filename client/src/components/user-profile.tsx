@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import {
@@ -9,8 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Settings, User as UserIcon, MessageSquare, Flag } from "lucide-react";
-import { type User } from "@shared/schema";
+import { LogOut, Settings, MessageSquare, Flag } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -36,6 +35,7 @@ export function UserProfile({ user, messageCount = 0, onLogout, onStartDM }: Use
           >
             <div className="relative">
               <Avatar className="h-10 w-10">
+                <AvatarImage src={user.avatarUrl || ""} alt={user.username} />
                 <AvatarFallback className="bg-primary/20 text-primary font-semibold">
                   {(user.displayName || user.username).slice(0, 2).toUpperCase()}
                 </AvatarFallback>
@@ -47,7 +47,7 @@ export function UserProfile({ user, messageCount = 0, onLogout, onStartDM }: Use
                 {user.displayName || user.username}
               </p>
               <p className="text-xs text-muted-foreground">
-                {messageCount} messages
+                {messageCount > 0 ? `${messageCount} messages` : "Online"}
               </p>
             </div>
           </Button>
@@ -68,25 +68,25 @@ export function UserProfile({ user, messageCount = 0, onLogout, onStartDM }: Use
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      
+
       {!isOwnProfile && (
         <div className="mt-4 flex flex-col gap-2">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="w-full justify-start gap-2 hover-elevate"
             onClick={() => onStartDM?.(user.id)}
           >
             <MessageSquare className="h-4 w-4" />
             Direct Message
           </Button>
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             className="w-full justify-start gap-2 text-red-400 hover:text-red-400 hover:bg-red-500/10 hover-elevate"
             onClick={() => {
-               const reason = window.prompt("Reason for report?");
-               if (reason) {
-                 apiRequest("POST", "/api/reports", { targetUserId: user.id, reason });
-               }
+              const reason = window.prompt("Reason for report?");
+              if (reason) {
+                apiRequest("POST", "/api/reports", { targetUserId: user.id, reason });
+              }
             }}
           >
             <Flag className="h-4 w-4" />

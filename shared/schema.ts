@@ -12,6 +12,7 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   role: text("role").$type<"user" | "moderator" | "admin">().default("user").notNull(),
   bio: text("bio"),
+  avatarUrl: text("avatar_url"),
   isBanned: boolean("is_banned").default(false).notNull(),
   timeoutUntil: timestamp("timeout_until"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -145,6 +146,7 @@ export const updateProfileSchema = z.object({
   username: z.string().min(3).optional(),
   displayName: z.string().min(1).optional(),
   bio: z.string().max(500).optional(),
+  avatarUrl: z.string().url().optional().or(z.literal("")),
 });
 
 export const updatePasswordSchema = z.object({
@@ -167,7 +169,7 @@ export type ModerationLog = typeof moderationLogs.$inferSelect;
 export type InsertModerationLog = z.infer<typeof insertModerationLogSchema>;
 
 export type MessageWithUser = Message & {
-  user: Pick<User, "id" | "username" | "displayName" | "role">;
+  user: Pick<User, "id" | "username" | "displayName" | "role" | "avatarUrl">;
 };
 
 export type ChannelWithCreator = Channel & {
@@ -176,8 +178,8 @@ export type ChannelWithCreator = Channel & {
 };
 
 export type DirectMessageWithUsers = DirectMessage & {
-  sender: Pick<User, "id" | "username" | "displayName" | "role">;
-  receiver: Pick<User, "id" | "username" | "displayName" | "role">;
+  sender: Pick<User, "id" | "username" | "displayName" | "role" | "avatarUrl">;
+  receiver: Pick<User, "id" | "username" | "displayName" | "role" | "avatarUrl">;
 };
 
 export type ReportWithDetails = Report & {

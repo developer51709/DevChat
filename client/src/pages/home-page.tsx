@@ -168,11 +168,11 @@ export default function HomePage() {
   });
 
   const sendMessageMutation = useMutation({
-    mutationFn: async (data: { content: string; channelId?: string; receiverId?: string }) => {
+    mutationFn: async (data: { content: string; channelId?: string; receiverId?: string; attachments?: string[] }) => {
       if (viewMode === "channel") {
-        await apiRequest("POST", "/api/messages", { content: data.content, channelId: data.channelId });
+        await apiRequest("POST", "/api/messages", { content: data.content || " ", channelId: data.channelId, attachments: data.attachments });
       } else {
-        await apiRequest("POST", "/api/dms", { content: data.content, receiverId: data.receiverId });
+        await apiRequest("POST", "/api/dms", { content: data.content || " ", receiverId: data.receiverId, attachments: data.attachments });
       }
     },
     onSuccess: () => {
@@ -228,11 +228,11 @@ export default function HomePage() {
     },
   });
 
-  const handleSendMessage = (content: string) => {
+  const handleSendMessage = (content: string, attachments?: string[]) => {
     if (viewMode === "channel" && activeChannelId) {
-      sendMessageMutation.mutate({ content, channelId: activeChannelId });
+      sendMessageMutation.mutate({ content, channelId: activeChannelId, attachments });
     } else if (viewMode === "dm" && activeDMUserId) {
-      sendMessageMutation.mutate({ content, receiverId: activeDMUserId });
+      sendMessageMutation.mutate({ content, receiverId: activeDMUserId, attachments });
     }
   };
 

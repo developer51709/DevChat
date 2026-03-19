@@ -3,6 +3,29 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { setupAuth, hashPassword, comparePasswords, requireAuth } from "./auth";
+import multer from "multer";
+import path from "path";
+import { existsSync, mkdirSync } from "fs";
+
+const uploadsDir = path.join(process.cwd(), "uploads");
+if (!existsSync(uploadsDir)) mkdirSync(uploadsDir, { recursive: true });
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, uploadsDir),
+    filename: (_req, file, cb) => {
+      const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+      cb(null, `${uniqueSuffix}${path.extname(file.originalname)}`);
+    },
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (_req, file, cb) => {
+    const allowed = /jpeg|jpg|png|gif|webp|pdf|txt|doc|docx|zip|mp4|mp3/;
+    const ext = path.extname(file.originalname).toLowerCase().replace(".", "");
+    if (allowed.test(ext)) cb(null, true);
+    else cb(new Error("File type not allowed"));
+  },
+});
 import {
   insertChannelSchema,
   insertMessageSchema,
@@ -64,6 +87,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Setup authentication routes: /api/register, /api/login, /api/logout, /api/user
   setupAuth(app);
+
+  // File upload endpoint
+  app.post("/api/upload", requireAuth, upload.single("file"), (req, res) => {
+    if (!req.file) return res.status(400).send("No file uploaded");
+    const fileUrl = `/uploads/${req.file.filename}`;
+    res.json({ url: fileUrl, name: req.file.originalname, size: req.file.size, mimetype: req.file.mimetype });
+  });
+
+  // Avatar upload endpoint
+  app.post("/api/user/avatar", requireAuth, upload.single("avatar"), async (req, res) => {
+    try {
+      if (!req.file) return res.status(400).send("No file uploaded");
+      const avatarUrl = `/uploads/${req.file.filename}`;
+      const user = await storage.updateUser(req.user!.id, { avatarUrl });
+      const { password: _, ...safeUser } = user;
+
+      wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({ type: "USER_UPDATE", user: safeUser }));
+        }
+      });
+
+      res.json(safeUser);
+    } catch (error: any) {
+      res.status(500).send(error.message);
+    }
+  });
 
   // Channel routes
   app.get("/api/channels", requireAuth, async (req, res) => {

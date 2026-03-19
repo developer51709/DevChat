@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { User } from "@shared/schema";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronLeft, MessageSquare, Calendar } from "lucide-react";
@@ -51,8 +51,9 @@ export default function ProfilePage() {
           <CardHeader className="relative pb-0">
             <div className="absolute -top-12 left-6">
               <Avatar className="h-24 w-24 border-4 border-background">
+                <AvatarImage src={(user as any).avatarUrl || ""} alt={user.username} />
                 <AvatarFallback className="bg-primary/20 text-primary text-2xl font-bold">
-                  {user.username.slice(0, 2).toUpperCase()}
+                  {(user.displayName || user.username).slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
             </div>
